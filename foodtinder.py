@@ -9,6 +9,7 @@ from kivy.utils import platform
 from plyer import gps
 import qrcode
 
+
 # Dictionary to store session data
 session_data = {}
 
@@ -130,6 +131,10 @@ ScreenManager:
             BoxLayout:
                 id: consensus_list
                 orientation: "vertical"
+        MDRaisedButton:
+            text: "Save List"
+            pos_hint: {"center_x": 0.5}
+            on_release: app.save_list()
 '''
 
 API_KEY = "YOUR_GOOGLE_PLACES_API_KEY"
@@ -314,23 +319,45 @@ class FoodMatchApp(MDApp):
         """Display the places that all users in the session agreed on."""
         session = session_data.get(session_id)
         if session:
-            agreed_places = [
-                place_id for place_id, users in session["agreed_places"].items()
-                if len(users) == len(session["members"])
+            total_members = len(session["members"])
+            place_agreement = [
+                (place_id, len(users) / total_members * 100)
+                for place_id, users in session["agreed_places"].items()
             ]
+            place_agreement.sort(key=lambda x: x[1], reverse=True)
+
             consensus_screen = self.root.get_screen('consensus')
             consensus_list = consensus_screen.ids.consensus_list
             consensus_list.clear_widgets()
-            for place_id in agreed_places:
+            for place_id, agreement in place_agreement:
                 place = next((p for p in session["places"] if p["place_id"] == place_id), None)
                 if place:
                     consensus_list.add_widget(
                         MDLabel(
-                            text=place.get("name", "Unknown"),
+                            text=f"{place.get('name', 'Unknown')} - {agreement:.0f}% agreed",
                             halign="center",
                             font_style="H5"
                         )
                     )
             self.root.current = 'consensus'
+
+    def save_list(self):
+        """Save the consensus list to a file."""
+        session_id = self.root.get_screen('session').ids.session_info.text.split(": ")[1]
+        session = session_data.get(session_id)
+        if session:
+            total_members = len(session["members"])
+            place_agreement = [
+                (place_id, len(users) / total_members * 100)
+                for place_id, users in session["agreed_places"].items()
+            ]
+            place_agreement.sort(key=lambda x: x[1], reverse=True)
+
+            with open("consensus_list.txt", "w") as file:
+                for place_id, agreement in place_agreement:
+                    place = next((p for p in session["places"] if p["place_id"] == place_id), None)
+                    if place:
+                        file.write(f"{place.get('name', 'Unknown')} - {agreement:.0f}% agreed\n")
+            print("Consensus list saved to consensus_list.txt")
 
 FoodMatchApp().run()

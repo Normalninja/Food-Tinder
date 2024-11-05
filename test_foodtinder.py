@@ -19,7 +19,7 @@ class TestFoodTinder(unittest.TestCase):
     def test_get_nearby_places(self, mock_get):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"results": [{"name": "Place1"}]}
+        mock_response.json.return_value = {"results": [{"name": "Place1", "place_id": "place1"}]}
         mock_get.return_value = mock_response
 
         self.app.latitude = 37.7749
