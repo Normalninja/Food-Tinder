@@ -1,0 +1,39 @@
+{
+  "name": "food-tinder",
+  "version": "1.0.0",
+  "description": "A simple React app for swiping through food places.",
+  "main": "index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.1",
+    "axios": "^0.21.4",
+    "axios-mock-adapter": "^2.1.0",
+    "food-tinder": "file:",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-scripts": "4.0.3",
+    "web-vitals": "^4.2.4"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
