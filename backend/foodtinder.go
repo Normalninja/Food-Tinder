@@ -89,6 +89,9 @@ func createSessionWithParameters(w http.ResponseWriter, r *http.Request) {
         Members:      []string{},
     }
 
+    // Notify other users of the session update
+    notifySessionUpdate(req.SessionID)
+
     w.WriteHeader(http.StatusOK)
 }
 
@@ -162,7 +165,7 @@ func getNearbyPlaces(w http.ResponseWriter, r *http.Request) {
     defer mu.Unlock()
 
     session, exists := sessionData[sessionID]
-    if (!exists) {
+    if !exists {
         http.Error(w, "Session not found", http.StatusNotFound)
         return
     }
@@ -278,6 +281,11 @@ func showConsensus(w http.ResponseWriter, r *http.Request) {
 
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(consensus)
+}
+
+func notifySessionUpdate(sessionID string) {
+    // Implement WebSocket or other notification mechanism to notify users of session update
+    fmt.Printf("Session %s updated\n", sessionID)
 }
 
 func enableCors(next http.Handler) http.Handler {

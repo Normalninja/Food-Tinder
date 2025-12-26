@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 function App() {
@@ -8,11 +8,13 @@ function App() {
   const [placeDetails, setPlaceDetails] = useState(null);
   const [sessionID, setSessionID] = useState('session1'); // Replace with actual session ID
   const [userID, setUserID] = useState('user1'); // Replace with actual user ID
-  const [distance, setDistance] = useState(1000);
+  const [distance, setDistance] = useState(1); // Default distance
+  const [distanceUnit, setDistanceUnit] = useState('miles'); // Default unit
   const [price, setPrice] = useState(2);
   const [rating, setRating] = useState(4.0);
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
+  const ws = useRef(null);
 
   useEffect(() => {
     // Get the user's current location
@@ -29,6 +31,20 @@ function App() {
     } else {
       console.error('Geolocation is not supported by this browser.');
     }
+
+    // Establish WebSocket connection
+    ws.current = new WebSocket('ws://localhost:8080/ws');
+    ws.current.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === 'session_updated') {
+        // Handle session update notification
+        handleCreateSession();
+      }
+    };
+
+    return () => {
+      ws.current.close();
+    };
   }, []);
 
   const handleCreateSession = () => {
@@ -37,15 +53,28 @@ function App() {
       return;
     }
 
+    // Convert distance to meters
+    const distanceInMeters = distanceUnit === 'miles' ? distance * 1609.34 : distance * 1000;
+
+    console.log('Creating session with parameters:', {
+      session_id: sessionID,
+      distance: distanceInMeters,
+      price: price,
+      rating: rating,
+      latitude: latitude,
+      longitude: longitude
+    });
+
     axios.post('http://localhost:8080/createSessionWithParameters', {
       session_id: sessionID,
-      distance: distance,
+      distance: distanceInMeters,
       price: price,
       rating: rating,
       latitude: latitude,
       longitude: longitude
     })
       .then(response => {
+        console.log('Session created:', response.data);
         // Fetch initial places and parameters from the backend
         axios.get('http://localhost:8080/getNearbyPlaces', {
           params: {
@@ -55,6 +84,7 @@ function App() {
         })
           .then(response => {
             setPlaces(response.data.places);
+            setCurrentIndex(0); // Reset the current index
             console.log('Places fetched:', response.data.places);
           })
           .catch(error => {
@@ -104,6 +134,18 @@ function App() {
     }
   };
 
+  const handleRestartSession = () => {
+    setCurrentIndex(0);
+  };
+
+  const handleUpdateParameters = () => {
+    handleCreateSession();
+  };
+
+  const handleQuit = () => {
+    // Logic to quit the application (e.g., redirect to a different page or show a message)
+  };
+
   return (
     <div className="App">
       <h1>Food Tinder</h1>
@@ -112,6 +154,13 @@ function App() {
         <label>
           Distance:
           <input type="number" value={distance} onChange={(e) => setDistance(e.target.value)} />
+        </label>
+        <label>
+          Unit:
+          <select value={distanceUnit} onChange={(e) => setDistanceUnit(e.target.value)}>
+            <option value="miles">Miles</option>
+            <option value="kilometers">Kilometers</option>
+          </select>
         </label>
         <label>
           Price:
@@ -134,6 +183,9 @@ function App() {
       ) : (
         <div>
           <h2>No more places</h2>
+          <button onClick={handleRestartSession}>Restart with Same Parameters</button>
+          <button onClick={handleUpdateParameters}>Update Parameters</button>
+          <button onClick={handleQuit}>Quit</button>
           <button onClick={handleShowConsensus}>Show Consensus</button>
         </div>
       )}
