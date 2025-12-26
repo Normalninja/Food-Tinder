@@ -13,7 +13,12 @@ export function setCache(key, value, ttlMs = DEFAULT_TTL_MS) {
     value
   };
   try {
-    localStorage.setItem(makeKey(key), JSON.stringify(payload));
+    if (typeof localStorage?.setItem === 'function') {
+      localStorage.setItem(makeKey(key), JSON.stringify(payload));
+    } else {
+      // environment doesn't expose localStorage (e.g., some test runners)
+      // silently skip caching
+    }
   } catch (e) {
     console.warn('Failed to set cache', e);
   }
@@ -21,13 +26,14 @@ export function setCache(key, value, ttlMs = DEFAULT_TTL_MS) {
 
 export function getCache(key) {
   try {
+    if (typeof localStorage?.getItem !== 'function') return null;
     const raw = localStorage.getItem(makeKey(key));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || !parsed.ts) return null;
     if (Date.now() - parsed.ts > (parsed.ttl || DEFAULT_TTL_MS)) {
       // expired
-      localStorage.removeItem(makeKey(key));
+      if (typeof localStorage?.removeItem === 'function') localStorage.removeItem(makeKey(key));
       return null;
     }
     return parsed.value;
@@ -39,10 +45,12 @@ export function getCache(key) {
 
 export function clearCache(keyPrefix = '') {
   try {
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const k = localStorage.key(i);
-      if (!k) continue;
-      if (k.startsWith(PREFIX + keyPrefix)) localStorage.removeItem(k);
+    if (typeof localStorage?.length === 'number') {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith(PREFIX + keyPrefix) && typeof localStorage.removeItem === 'function') localStorage.removeItem(k);
+      }
     }
   } catch (e) {
     console.warn('Failed to clear cache', e);
@@ -51,7 +59,8 @@ export function clearCache(keyPrefix = '') {
 
 export function makePlacesKey(lat, lon, radiusMeters) {
   // round coords to 3 decimals (~110m) to improve cache hits
+  // v3 cache key to invalidate broken cache with empty objects
   const rLat = Math.round(lat * 1000) / 1000;
   const rLon = Math.round(lon * 1000) / 1000;
-  return `places:${rLat}:${rLon}:${Math.round(radiusMeters)}`;
+  return `places:v3:${rLat}:${rLon}:${Math.round(radiusMeters)}`;
 }
