@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { fetchPlacesOSM } from './api/overpass';
+import opening_hours from 'opening_hours';
+import * as sessionAPI from './session';
 
 function App() {
   const [places, setPlaces] = useState([]);
@@ -32,18 +35,10 @@ function App() {
       console.error('Geolocation is not supported by this browser.');
     }
 
-    // Establish WebSocket connection
-    ws.current = new WebSocket('ws://localhost:8080/ws');
-    ws.current.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      if (message.type === 'session_updated') {
-        // Handle session update notification
-        handleCreateSession();
-      }
-    };
-
+    // This client-only prototype uses Overpass + optional Firebase/localStorage for sessions.
+    // WebSocket backend is not required. We keep a ref for potential future peer signaling.
     return () => {
-      ws.current.close();
+      if (ws.current) try { ws.current.close(); } catch (e) { /* ignore */ }
     };
   }, []);
 
@@ -65,62 +60,71 @@ function App() {
       longitude: longitude
     });
 
-    axios.post('http://localhost:8080/createSessionWithParameters', {
-      session_id: sessionID,
-      distance: distanceInMeters,
-      price: price,
-      rating: rating,
-      latitude: latitude,
-      longitude: longitude
-    })
-      .then(response => {
-        console.log('Session created:', response.data);
-        // Fetch initial places and parameters from the backend
-        axios.get('http://localhost:8080/getNearbyPlaces', {
-          params: {
-            session_id: sessionID,
-            user_id: userID,
+    try {
+      // Create a local session record (Firebase or localStorage)
+      const sessionObj = {
+        session_id: sessionID,
+        origin: { lat: latitude, lon: longitude },
+        radius: distanceInMeters,
+        created_at: Date.now(),
+        places: [],
+        participants: { [userID]: { joined_at: Date.now() } },
+        votes: {}
+      };
+      await sessionAPI.createSession(sessionID, sessionObj);
+
+      // Fetch places directly from Overpass
+      const fetched = await fetchPlacesOSM(latitude, longitude, distanceInMeters);
+
+      // Try to evaluate opening_hours where present (best-effort)
+      const now = new Date();
+      const mapped = fetched.map(p => {
+        let open = null;
+        if (p.opening_hours) {
+          try {
+            const oh = new opening_hours(p.opening_hours);
+            open = oh.getState(now);
+          } catch (e) {
+            open = null;
           }
-        })
-          .then(response => {
-            setPlaces(response.data.places);
-            setCurrentIndex(0); // Reset the current index
-            console.log('Places fetched:', response.data.places);
-          })
-          .catch(error => {
-            console.error('Error fetching places:', error);
-          });
-      })
-      .catch(error => {
-        console.error('Error creating session:', error);
+        }
+        return { ...p, open_now: open };
       });
+
+      // Save places to session and set UI
+      const sessionWithPlaces = { ...sessionObj, places: mapped };
+      await sessionAPI.createSession(sessionID, sessionWithPlaces);
+      setPlaces(mapped);
+      setCurrentIndex(0);
+    } catch (e) {
+      console.error('Error creating session (client-side):', e);
+    }
   };
 
   const handleSwipe = (liked) => {
     const placeID = places[currentIndex].place_id;
-
-    axios.post('http://localhost:8080/trackUserAgreement', {
-      session_id: sessionID,
-      user_id: userID,
-      place_id: placeID,
-      liked: liked
-    }).then(response => {
-      console.log('User agreement tracked');
-    }).catch(error => {
-      console.error('Error tracking user agreement:', error);
-    });
-
+    // For now, a like records a vote; dislikes are ignored in this prototype
+    if (liked) {
+      sessionAPI.addVote(sessionID, placeID, userID).catch(console.error);
+    }
     setCurrentIndex(currentIndex + 1);
   };
 
   const handleShowConsensus = () => {
-    axios.post('http://localhost:8080/showConsensus', {
-      session_id: sessionID
-    }).then(response => {
-      setConsensus(response.data);
-    }).catch(error => {
-      console.error('Error showing consensus:', error);
-    });
+    // Compute consensus from stored session votes (best-effort)
+    (async function () {
+      try {
+        const s = await sessionAPI.getSession(sessionID);
+        if (!s) return;
+        const totalParticipants = Object.keys(s.participants || {}).length || 1;
+        const results = (s.places || []).map(p => {
+          const likes = (s.votes && s.votes[p.place_id]) ? s.votes[p.place_id].length : 0;
+          const pct = Math.round((likes / totalParticipants) * 100);
+          return { ...p, agreement: pct };
+        }).sort((a, b) => b.agreement - a.agreement);
+        setConsensus(results);
+      } catch (e) { console.error(e); }
+    })();
   };
 
   const handleCardClick = async (placeId) => {
@@ -162,14 +166,7 @@ function App() {
             <option value="kilometers">Kilometers</option>
           </select>
         </label>
-        <label>
-          Price:
-          <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
-        </label>
-        <label>
-          Rating:
-          <input type="number" step="0.1" value={rating} onChange={(e) => setRating(e.target.value)} />
-        </label>
+        <p style={{fontStyle: 'italic'}}>Note: Price and rating filters are not implemented for the OSM prototype.</p>
         <button onClick={handleCreateSession}>Create Session</button>
       </div>
       {currentIndex < places.length ? (
