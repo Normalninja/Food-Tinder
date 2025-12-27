@@ -206,7 +206,7 @@ function App() {
         ...session,
         participants: {
           ...session.participants,
-          [newUserID]: { joined_at: Date.now() }
+          [newUserID]: { joined_at: Timestamp.now() }
         }
       };
       await sessionAPI.createSession(joinSessionInput.trim(), updatedSession);
