@@ -2,7 +2,7 @@
 
 A collaborative food discovery app where groups swipe through nearby restaurants to find what everyone wants to eat.
 
-[**🚀 Live Demo**](https://Normalninja.github.io/food-tinder/) *(update with your GitHub Pages URL)*
+[**🚀 Live Demo**](https://normalninja.github.io/Food-Tinder/) 
 
 ## Features
 
