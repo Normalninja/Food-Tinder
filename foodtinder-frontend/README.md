@@ -68,3 +68,21 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## Food-Tinder prototype notes
+
+- This project includes a client-only prototype that queries OpenStreetMap's Overpass API for nearby food places and uses `opening_hours` to approximate whether a place is "open now" (best-effort).
+- Real-time sessions are supported via Firebase Firestore if you provide the following environment variables in a `.env` file at the project root (Create React App will inject variables starting with `REACT_APP_`):
+	- REACT_APP_FIREBASE_API_KEY
+	- REACT_APP_FIREBASE_AUTH_DOMAIN
+	- REACT_APP_FIREBASE_PROJECT_ID
+	- REACT_APP_FIREBASE_STORAGE_BUCKET
+	- REACT_APP_FIREBASE_MESSAGING_SENDER_ID
+	- REACT_APP_FIREBASE_APP_ID
+- If Firebase config is not provided, a localStorage fallback is used (sessions will only exist in the current browser).
+- To install dependencies, run `npm install` in the `foodtinder-frontend` folder (Node.js/npm is required).
+
+### Caching & resilience
+
+- The prototype caches Overpass responses in `localStorage` for a short TTL (10 minutes by default) to avoid hitting rate limits during prototyping and to provide offline resilience.
+- Multiple Overpass endpoints are tried in sequence (primary + fallbacks) with a short backoff to improve reliability.
