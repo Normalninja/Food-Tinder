@@ -16,9 +16,19 @@ async function tryFetchOverpass(url, query) {
 }
 
 export async function fetchPlacesOSM(lat, lon, radiusMeters = 1000, opts = {}) {
+  const { skipCache = false } = opts;
   const cacheKey = makePlacesKey(lat, lon, radiusMeters);
-  const cached = getCache(cacheKey);
-  if (cached) return cached;
+  
+  // Check cache first (unless skipCache is true for fresh session data)
+  if (!skipCache) {
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log('Returning cached places:', cached.length);
+      return cached;
+    }
+  } else {
+    console.log('Skipping cache, fetching fresh places for new session');
+  }
 
   const query = `[
     out:json][timeout:25];(
