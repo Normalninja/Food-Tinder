@@ -6,22 +6,45 @@ A collaborative food discovery app where groups swipe through nearby restaurants
 
 ## Features
 
-- 🗺️ **Location-based search** - Find restaurants within a custom radius
-- 👥 **Multi-device sessions** - Create QR codes for friends to join
-- 💖 **Tinder-style swiping** - Like or dislike places
-- 📊 **Progress tracking** - See how many places reviewed
-- 🎯 **Smart consensus** - Only shows options with 2+ votes
-- 🔄 **Vote preservation** - Votes carry over when updating search radius
-- 📱 **Mobile-friendly** - Works on phones, tablets, and desktops
-- ⚡ **Real-time sync** - See votes update instantly across all devices
+### 🎯 Multi-Device Sessions
+- **QR Code Sharing** - Create a session and share QR codes for others to join
+- **Real-time Sync** - All devices see votes and changes instantly via Firebase
+- **Session Management** - Restart with same parameters or update search radius
+- **Vote Preservation** - Your votes persist when expanding search area
+
+### 🍽️ Smart Filtering
+- **Cuisine Selection** - Filter by cuisine types based on what's actually available in your search area
+- **Multi-select** - Choose multiple cuisines or select/deselect all at once
+- **Dynamic Options** - Only see cuisines that exist in nearby restaurants
+
+### 📍 Location-Based Discovery
+- **Custom Radius** - Search from 500m to 50km around any location
+- **Live Data** - Pulls real restaurant info from OpenStreetMap
+- **Rich Details** - See address, cuisine type, price range, ratings, phone, and website when available
+
+### 💖 Tinder-Style Swiping
+- **Touch & Mouse** - Swipe on mobile or drag with mouse on desktop
+- **Visual Feedback** - Cards rotate and move as you swipe
+- **Button Options** - Use Like/Dislike buttons if you prefer clicking
+- **Undo Feature** - Made a mistake? Undo your last vote
+
+### 📊 Progress & Consensus
+- **Live Counter** - See how many places you've reviewed (X/Y)
+- **Smart Results** - Only shows restaurants with 2+ likes
+- **Full Details** - View all info for consensus picks
+- **Business Hours** - See if places are open now
 
 ## How It Works
 
-1. **Host creates session** - Set location and search radius
-2. **Share QR code** - Others scan to join the session
-3. **Everyone swipes** - Like or dislike restaurant options
-4. **View consensus** - See which places got the most votes
-5. **Pick a winner** - Go eat!
+1. **Create Session** - Enter a location and search radius to find nearby restaurants
+2. **Select Cuisines** - Choose which types of food you're interested in from what's available
+3. **Share QR Code** - Others scan the code to join your session on their devices
+4. **Swipe Together** - Everyone swipes left (dislike) or right (like) on restaurants
+   - Swipe with touch gestures or mouse drag
+   - Use buttons if you prefer
+   - Undo if you change your mind
+5. **View Results** - See restaurants that got 2+ likes with full details
+6. **Pick & Go** - Decide on a winner and head out to eat!
 
 ## Tech Stack
 
@@ -132,12 +155,16 @@ ISC
 
 ## Roadmap
 
-- [ ] Add filters (cuisine type, price range, rating)
+- [x] ~~Add cuisine filtering~~ ✅ Completed
+- [x] ~~Swipe gestures (touch & mouse)~~ ✅ Completed  
+- [x] ~~Undo button~~ ✅ Completed
+- [x] ~~Display price and ratings~~ not possible using OSM
 - [ ] Save favorite places
 - [ ] Session history
 - [ ] Dark mode
 - [ ] Share results via SMS/email
 - [ ] Integration with Google Maps for directions
+- [ ] Dietary restrictions filter (vegetarian, vegan, gluten-free)
 
 ## Known Issues
 
@@ -154,4 +181,4 @@ ISC
 
 ---
 
-Made with ❤️ for groups who can't decide where to eat
+Made for groups who can't decide where to eat

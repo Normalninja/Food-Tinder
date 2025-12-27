@@ -1,88 +1,178 @@
-# Getting Started with Create React App
+# Food Tinder
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A collaborative restaurant discovery app where groups can swipe through nearby restaurants together and find consensus on where to eat!
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+### 🎯 Multi-Device Sessions
+- Create sessions and share via QR code or session ID
+- Real-time syncing across all participants using Firebase
+- Auto-join sessions by scanning QR codes
+- Works across different browsers and devices
 
-### `npm start`
+### 🍽️ Smart Filtering
+- **Distance-based search**: Search restaurants within a custom radius (miles or kilometers)
+- **Cuisine filtering**: Dynamically filters based on actual cuisines available in your area
+- Multi-select cuisine types to focus on what you want
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### 📍 Restaurant Details
+- Fetches data from OpenStreetMap (OSM)
+- Displays: Address, Cuisine type, Price range, Star ratings, Phone numbers, Website links
+- Opening hours with "open now" detection
+- Placeholder images for all restaurants
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### 👆 Intuitive Swiping
+- **Tinder-style swipe gestures**: 
+  - Swipe right (or drag right) to like 👍
+  - Swipe left (or drag left) to dislike 👎
+- Works on both touch devices and desktop (mouse)
+- Visual card rotation feedback while swiping
 
-### `npm test`
+### 🔄 Smart Session Management
+- **Undo button**: Reverse your last vote
+- **Restart session**: Clear all your votes and start fresh
+- Progress tracking: See how many places you've reviewed
+- Skip already-reviewed places automatically
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 🎉 Consensus Voting
+- View places with 2+ votes sorted by agreement percentage
+- See which restaurants your group likes most
+- Only shows places where multiple people agreed
 
-### `npm run build`
+## Getting Started
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Prerequisites
+- Node.js and npm
+- Firebase account (for multi-device sessions)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Installation
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. Clone the repository:
+```bash
+git clone https://github.com/Normalninja/Food-Tinder.git
+cd Food-Tinder/foodtinder-frontend
+```
 
-### `npm run eject`
+2. Install dependencies:
+```bash
+npm install
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+3. Set up Firebase (optional, but required for multi-device sessions):
+   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - Enable Firestore Database
+   - Copy your Firebase config
+   - Create a `.env` file in `foodtinder-frontend/` directory:
+   ```env
+   VITE_FIREBASE_API_KEY=your-api-key-here
+   VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your-project-id
+   VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+   VITE_FIREBASE_APP_ID=your-app-id
+   ```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+4. Configure Firestore security rules (in Firebase Console):
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /sessions/{sessionId} {
+      allow create: if true;
+      allow read, write, delete: if true;
+    }
+  }
+}
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Running the App
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+#### Development Mode
+```bash
+npm run dev
+```
+Opens at [http://localhost:5173/Food-Tinder/](http://localhost:5173/Food-Tinder/)
 
-## Learn More
+#### Production Build
+```bash
+npm run build
+```
+Builds the app to the `dist/` folder, ready for deployment.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## How to Use
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+1. **Create a Session**:
+   - Click "Create Session"
+   - Allow location access
+   - Set your search radius
+   - Select cuisines you're interested in
+   - Share the QR code or session ID with friends
 
-### Code Splitting
+2. **Join a Session**:
+   - Scan the QR code or enter the session ID
+   - Start swiping!
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+3. **Swipe on Restaurants**:
+   - Swipe right or click 👍 to like
+   - Swipe left or click 👎 to dislike
+   - Use the Undo button to reverse your last action
 
-### Analyzing the Bundle Size
+4. **View Consensus**:
+   - Once everyone has voted, check which restaurants have the most agreement
+   - Places are sorted by percentage of group agreement
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Technology Stack
 
-### Making a Progressive Web App
+- **Frontend**: React 18, Vite
+- **Styling**: Inline CSS (Material-like design)
+- **Data Source**: OpenStreetMap Overpass API
+- **Backend**: Firebase Firestore (real-time database)
+- **QR Codes**: qrcode.react
+- **Opening Hours**: opening_hours library
+- **Deployment**: GitHub Pages
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Architecture
 
-### Advanced Configuration
+### Data Flow
+1. User requests location → Browser Geolocation API
+2. Search nearby restaurants → OpenStreetMap Overpass API
+3. Extract available cuisines → Display cuisine filter
+4. Create session → Firebase Firestore
+5. Users vote → Real-time sync via Firebase
+6. Calculate consensus → Sort by agreement percentage
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### Caching & Resilience
+- OSM responses cached in localStorage (10-minute TTL)
+- Multiple Overpass API endpoints with automatic fallback
+- Works offline with cached data
 
-### Deployment
+### Firebase Integration
+- Sessions stored in Firestore with 24-hour retention
+- Real-time updates using `onSnapshot`
+- Automatic cleanup of stale sessions
+- Falls back to localStorage if Firebase not configured
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Deployment
 
-### `npm run build` fails to minify
+The app is deployed to GitHub Pages at: https://normalninja.github.io/Food-Tinder/
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+GitHub Actions automatically builds and deploys on push to `main` branch.
 
-## Food-Tinder prototype notes
+## Contributing
 
-- This project includes a client-only prototype that queries OpenStreetMap's Overpass API for nearby food places and uses `opening_hours` to approximate whether a place is "open now" (best-effort).
-- Real-time sessions are supported via Firebase Firestore if you provide the following environment variables in a `.env` file at the project root (Create React App will inject variables starting with `REACT_APP_`):
-	- REACT_APP_FIREBASE_API_KEY
-	- REACT_APP_FIREBASE_AUTH_DOMAIN
-	- REACT_APP_FIREBASE_PROJECT_ID
-	- REACT_APP_FIREBASE_STORAGE_BUCKET
-	- REACT_APP_FIREBASE_MESSAGING_SENDER_ID
-	- REACT_APP_FIREBASE_APP_ID
-- If Firebase config is not provided, a localStorage fallback is used (sessions will only exist in the current browser).
-- To install dependencies, run `npm install` in the `foodtinder-frontend` folder (Node.js/npm is required).
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-### Caching & resilience
+## License
 
-- The prototype caches Overpass responses in `localStorage` for a short TTL (10 minutes by default) to avoid hitting rate limits during prototyping and to provide offline resilience.
-- Multiple Overpass endpoints are tried in sequence (primary + fallbacks) with a short backoff to improve reliability.
+This project is open source and available under the MIT License.
+
+## Acknowledgments
+
+- OpenStreetMap for restaurant data
+- Firebase for real-time database
+- Create React App for project bootstrapping
+- Vite for fast development experience
