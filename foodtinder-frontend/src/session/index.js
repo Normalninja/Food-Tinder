@@ -72,6 +72,7 @@ export function onSessionUpdate(sessionId, callback) {
 }
 
 export async function addVote(sessionId, placeId, userId) {
+  console.log('addVote called:', { sessionId, placeId, userId });
   if (db) {
     const placeVotesField = `votes.${placeId}`;
     const sessionRef = doc(db, 'sessions', sessionId);
@@ -82,14 +83,41 @@ export async function addVote(sessionId, placeId, userId) {
     data.votes[placeId] = data.votes[placeId] || [];
     if (!data.votes[placeId].includes(userId)) data.votes[placeId].push(userId);
     await setDoc(sessionRef, data);
+    console.log('Vote saved to Firestore');
     return data;
   }
 
   const s = await getSession(sessionId);
+  console.log('Current session state:', s);
   if (!s) throw new Error('Session not found');
   s.votes = s.votes || {};
   s.votes[placeId] = s.votes[placeId] || [];
   if (!s.votes[placeId].includes(userId)) s.votes[placeId].push(userId);
   await createSession(sessionId, s);
+  console.log('Vote saved to localStorage, updated votes:', s.votes);
+  return s;
+}
+
+export async function addDislike(sessionId, placeId, userId) {
+  console.log('addDislike called:', { sessionId, placeId, userId });
+  if (db) {
+    const sessionRef = doc(db, 'sessions', sessionId);
+    const snap = await getDoc(sessionRef);
+    let data = snap.exists() ? snap.data() : {};
+    data.dislikes = data.dislikes || {};
+    data.dislikes[placeId] = data.dislikes[placeId] || [];
+    if (!data.dislikes[placeId].includes(userId)) data.dislikes[placeId].push(userId);
+    await setDoc(sessionRef, data);
+    console.log('Dislike saved to Firestore');
+    return data;
+  }
+
+  const s = await getSession(sessionId);
+  if (!s) throw new Error('Session not found');
+  s.dislikes = s.dislikes || {};
+  s.dislikes[placeId] = s.dislikes[placeId] || [];
+  if (!s.dislikes[placeId].includes(userId)) s.dislikes[placeId].push(userId);
+  await createSession(sessionId, s);
+  console.log('Dislike saved to localStorage, updated dislikes:', s.dislikes);
   return s;
 }
