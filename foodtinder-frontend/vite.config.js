@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/food-tinder/', // GitHub Pages forces lowercase URLs
+  base: '/Food-Tinder/', // Must match GitHub repo name exactly
   server: {
     host: true, // Allow network access
     port: 5173
