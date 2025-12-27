@@ -45,15 +45,50 @@ export async function fetchPlacesOSM(lat, lon, radiusMeters = 1000, opts = {}) {
       let places = (data.elements || []).map(el => {
         const lat = el.lat ?? el.center?.lat;
         const lon = el.lon ?? el.center?.lon;
+        const tags = el.tags || {};
+        
+        // Build address from OSM address tags
+        const addressParts = [];
+        if (tags['addr:housenumber']) addressParts.push(tags['addr:housenumber']);
+        if (tags['addr:street']) addressParts.push(tags['addr:street']);
+        if (tags['addr:city']) addressParts.push(tags['addr:city']);
+        if (tags['addr:postcode']) addressParts.push(tags['addr:postcode']);
+        const address = addressParts.length > 0 ? addressParts.join(', ') : null;
+        
+        // Extract price range ($ to $$$$)
+        // OSM uses charge, price, price_level, payment, or custom price tags
+        let priceRange = null;
+        if (tags['price']) priceRange = tags['price'];
+        else if (tags['price_level']) priceRange = tags['price_level'];
+        else if (tags['payment:cash'] && tags['payment:cards']) priceRange = '$$';
+        
+        // Extract star rating if available (check multiple possible tag names)
+        let stars = null;
+        if (tags['stars']) stars = parseFloat(tags['stars']);
+        else if (tags['rating']) stars = parseFloat(tags['rating']);
+        else if (tags['star']) stars = parseFloat(tags['star']);
+        else if (tags['stars:michelin']) stars = parseFloat(tags['stars:michelin']);
+        
+        // Validate stars is a reasonable number (0-5 range)
+        if (stars !== null && (isNaN(stars) || stars < 0 || stars > 5)) {
+          stars = null;
+        }
+        
         return {
           place_id: `${el.type}/${el.id}`,
           osm_type: el.type,
           osm_id: el.id,
-          name: el.tags?.name || 'Unknown',
-          tags: el.tags || {},
+          name: tags?.name || 'Unknown',
+          tags: tags,
           lat,
           lon,
-          opening_hours: el.tags?.opening_hours || null,
+          opening_hours: tags?.opening_hours || null,
+          cuisine: tags?.cuisine || null,
+          website: tags?.website || null,
+          phone: tags?.phone || null,
+          address: address,
+          priceRange: priceRange,
+          stars: stars
         };
       });
 

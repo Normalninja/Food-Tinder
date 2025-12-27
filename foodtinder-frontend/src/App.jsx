@@ -34,6 +34,13 @@ function App() {
   const [locationError, setLocationError] = useState('');
   const [userVotedPlacesCount, setUserVotedPlacesCount] = useState(0); // Track actual vote count
   const [swipingInProgress, setSwipingInProgress] = useState(false); // Track if vote is being saved
+  const [unfilteredPlaces, setUnfilteredPlaces] = useState([]); // All places before cuisine filter
+  const [availableCuisines, setAvailableCuisines] = useState([]); // Unique cuisines from search
+  const [selectedCuisines, setSelectedCuisines] = useState([]); // User-selected cuisines to include
+  const [swipeOffset, setSwipeOffset] = useState(0); // X offset for swipe animation
+  const [isSwipeActive, setIsSwipeActive] = useState(false); // Track if user is actively swiping
+  const [swipeStartX, setSwipeStartX] = useState(0); // Starting X position of swipe
+  const [lastAction, setLastAction] = useState(null); // Store last action for undo: {placeId, liked, previousIndex}
   const ws = useRef(null);
 
   // Update voted count when session or places change
@@ -128,6 +135,22 @@ function App() {
       if (ws.current) try { ws.current.close(); } catch (e) { /* ignore */ }
     };
   }, []);
+
+  // Cleanup swipe state when mouse is released anywhere on the page
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isSwipeActive) {
+        console.log('Global mouse up detected, resetting swipe state');
+        setIsSwipeActive(false);
+        setSwipeOffset(0);
+      }
+    };
+
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isSwipeActive]);
 
   // Poll for session updates (only for non-creators on swipe screen)
   useEffect(() => {
@@ -466,7 +489,35 @@ function App() {
       };
       console.log('Creating/updating session with votes and dislikes:', { votes: filteredVotes, dislikes: filteredDislikes });
       await sessionAPI.createSession(newSessionID, sessionWithPlaces);
-      setPlaces(mapped);
+      
+      // Extract unique cuisines from fetched places (for new sessions only)
+      if (!isUpdate) {
+        const cuisineSet = new Set();
+        let placesWithoutCuisine = 0;
+        mapped.forEach(place => {
+          if (place.cuisine) {
+            // Handle multiple cuisines separated by semicolon or comma
+            const cuisines = place.cuisine.split(/[;,]/).map(c => c.trim()).filter(Boolean);
+            cuisines.forEach(c => cuisineSet.add(c));
+          } else {
+            placesWithoutCuisine++;
+          }
+        });
+        const uniqueCuisines = Array.from(cuisineSet).sort();
+        
+        // Add "other" category if there are places without cuisine
+        if (placesWithoutCuisine > 0) {
+          uniqueCuisines.push('other');
+        }
+        
+        console.log('Available cuisines:', uniqueCuisines);
+        console.log('Places without cuisine:', placesWithoutCuisine);
+        setUnfilteredPlaces(mapped);
+        setAvailableCuisines(uniqueCuisines);
+        setSelectedCuisines(uniqueCuisines); // Select all by default
+      } else {
+        setPlaces(mapped);
+      }
       
       // Find the first place this user hasn't voted on OR disliked yet
       if (isUpdate && (filteredVotes || filteredDislikes)) {
@@ -501,8 +552,8 @@ function App() {
         console.log('Parameter update complete, returning to swipe screen');
         setScreen('swipe'); // Go back to swiping after parameter update
       } else {
-        console.log('New session created, showing QR code');
-        setScreen('qrcode'); // Show QR code screen for new session
+        console.log('New session created, showing cuisine selection');
+        setScreen('cuisine-selection'); // Show cuisine selection before QR code
       }
     } catch (e) {
       console.error('Error creating session (client-side):', e);
@@ -528,6 +579,13 @@ function App() {
     const placeID = places[currentIdx].place_id;
     
     try {
+      // Store action for undo
+      setLastAction({
+        placeId: placeID,
+        liked: liked,
+        previousIndex: currentIdx
+      });
+      
       // Save both likes and dislikes so users don't see the same places again
       if (liked) {
         // update local vote state for quick consensus computation
@@ -651,13 +709,113 @@ function App() {
     }
   };
 
-  const handleRestartSession = () => {
+  const handleRestartSession = async () => {
     if (simulationMode) {
       setUserIndexes({ user1: 0, user2: 0, user3: 0 });
       setUserVotes({ user1: {}, user2: {}, user3: {} });
       setLocalVotes({});
     } else {
+      // Clear all votes and dislikes for this user from Firebase
+      try {
+        const session = await sessionAPI.getSession(sessionID);
+        if (session) {
+          const updatedVotes = {};
+          const updatedDislikes = {};
+          
+          // Remove this user from all vote arrays
+          Object.entries(session.votes || {}).forEach(([placeId, voters]) => {
+            const filteredVoters = voters.filter(v => v !== userID);
+            if (filteredVoters.length > 0) {
+              updatedVotes[placeId] = filteredVoters;
+            }
+          });
+          
+          // Remove this user from all dislike arrays
+          Object.entries(session.dislikes || {}).forEach(([placeId, dislikers]) => {
+            const filteredDislikers = dislikers.filter(d => d !== userID);
+            if (filteredDislikers.length > 0) {
+              updatedDislikes[placeId] = filteredDislikers;
+            }
+          });
+          
+          // Update session with cleared votes
+          await sessionAPI.createSession(sessionID, {
+            ...session,
+            votes: updatedVotes,
+            dislikes: updatedDislikes
+          });
+          
+          console.log('User votes and dislikes cleared, restarting from beginning');
+        }
+      } catch (e) {
+        console.error('Error clearing user votes:', e);
+      }
+      
       setCurrentIndex(0);
+      setUserVotedPlacesCount(0);
+      setLastAction(null);
+    }
+  };
+
+  const handleUndo = async () => {
+    if (!lastAction || swipingInProgress) {
+      return;
+    }
+    
+    setSwipingInProgress(true);
+    
+    try {
+      const { placeId, liked, previousIndex } = lastAction;
+      
+      // Remove the vote or dislike from Firebase
+      if (liked) {
+        // Remove from votes
+        const session = await sessionAPI.getSession(sessionID);
+        if (session && session.votes && session.votes[placeId]) {
+          const updatedVoters = session.votes[placeId].filter(v => v !== userID);
+          const updatedVotes = { ...session.votes };
+          
+          if (updatedVoters.length > 0) {
+            updatedVotes[placeId] = updatedVoters;
+          } else {
+            delete updatedVotes[placeId];
+          }
+          
+          await sessionAPI.createSession(sessionID, {
+            ...session,
+            votes: updatedVotes
+          });
+        }
+      } else {
+        // Remove from dislikes
+        const session = await sessionAPI.getSession(sessionID);
+        if (session && session.dislikes && session.dislikes[placeId]) {
+          const updatedDislikers = session.dislikes[placeId].filter(d => d !== userID);
+          const updatedDislikes = { ...session.dislikes };
+          
+          if (updatedDislikers.length > 0) {
+            updatedDislikes[placeId] = updatedDislikers;
+          } else {
+            delete updatedDislikes[placeId];
+          }
+          
+          await sessionAPI.createSession(sessionID, {
+            ...session,
+            dislikes: updatedDislikes
+          });
+        }
+      }
+      
+      // Go back to previous index
+      setCurrentIndex(previousIndex);
+      setUserVotedPlacesCount(prev => Math.max(0, prev - 1));
+      setLastAction(null);
+      
+      console.log('Undid last action, returned to index', previousIndex);
+    } catch (e) {
+      console.error('Error undoing action:', e);
+    } finally {
+      setSwipingInProgress(false);
     }
   };
 
@@ -735,6 +893,164 @@ function App() {
 
   const handleUpdateParameters = () => {
     handleCreateSession();
+  };
+
+  const handleApplyCuisineFilter = async () => {
+    try {
+      // Filter places based on selected cuisines
+      let filteredPlaces = unfilteredPlaces;
+      
+      if (selectedCuisines.length > 0 && selectedCuisines.length < availableCuisines.length) {
+        // Only filter if not all cuisines are selected
+        filteredPlaces = unfilteredPlaces.filter(place => {
+          if (!place.cuisine) {
+            // Include places without cuisine if 'other' is selected
+            return selectedCuisines.includes('other');
+          }
+          
+          // Check if any of the place's cuisines match selected cuisines
+          const placeCuisines = place.cuisine.split(/[;,]/).map(c => c.trim()).filter(Boolean);
+          return placeCuisines.some(c => selectedCuisines.includes(c));
+        });
+      }
+      
+      console.log('Filtered to', filteredPlaces.length, 'places with selected cuisines');
+      
+      if (filteredPlaces.length === 0) {
+        alert('No places found with the selected cuisines. Please select more cuisines.');
+        return;
+      }
+      
+      setPlaces(filteredPlaces);
+      
+      // Generate unique session ID and user ID if not already set
+      let sessID = sessionID;
+      let usrID = userID;
+      
+      if (!sessID) {
+        sessID = 'session-' + Math.random().toString(36).substring(2, 15);
+        setSessionID(sessID);
+      }
+      
+      if (!usrID) {
+        usrID = 'user-' + Math.random().toString(36).substring(2, 15);
+        setUserID(usrID);
+        setIsSessionCreator(true);
+      }
+      
+      // Save session with filtered places
+      await sessionAPI.createSession(sessID, {
+        places: filteredPlaces,
+        created_at: Timestamp.now(),
+        participants: { [usrID]: { joined_at: Timestamp.now() } },
+        votes: {},
+        dislikes: {}
+      });
+      
+      console.log('Session created with filtered places:', sessID);
+      setCurrentIndex(0);
+      setScreen('qrcode');
+    } catch (e) {
+      console.error('Error applying cuisine filter:', e);
+      alert('Error creating session: ' + e.message);
+    }
+  };
+
+  const toggleCuisine = (cuisine) => {
+    setSelectedCuisines(prev => {
+      if (prev.includes(cuisine)) {
+        return prev.filter(c => c !== cuisine);
+      } else {
+        return [...prev, cuisine];
+      }
+    });
+  };
+
+  const selectAllCuisines = () => {
+    setSelectedCuisines([...availableCuisines]);
+  };
+
+  const deselectAllCuisines = () => {
+    setSelectedCuisines([]);
+  };
+
+  // Swipe gesture handlers
+  const SWIPE_THRESHOLD = 100; // Minimum pixels to trigger a swipe
+
+  const handleTouchStart = (e) => {
+    if (swipingInProgress) return;
+    setIsSwipeActive(true);
+    setSwipeStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isSwipeActive || swipingInProgress) return;
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - swipeStartX;
+    setSwipeOffset(diff);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isSwipeActive || swipingInProgress) return;
+    setIsSwipeActive(false);
+    
+    console.log('Touch end - swipeOffset:', swipeOffset, 'threshold:', SWIPE_THRESHOLD);
+    
+    if (Math.abs(swipeOffset) > SWIPE_THRESHOLD) {
+      // Trigger like/dislike based on swipe direction
+      console.log('Swipe detected! Direction:', swipeOffset > 0 ? 'RIGHT (like)' : 'LEFT (dislike)');
+      if (swipeOffset > 0) {
+        handleSwipe(true); // Swipe right = like
+      } else {
+        handleSwipe(false); // Swipe left = dislike
+      }
+    } else {
+      console.log('Swipe too short, not triggering action');
+    }
+    
+    setSwipeOffset(0);
+  };
+
+  const handleMouseDown = (e) => {
+    if (swipingInProgress) return;
+    e.preventDefault(); // Prevent text selection while dragging
+    setIsSwipeActive(true);
+    setSwipeStartX(e.clientX);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isSwipeActive || swipingInProgress) return;
+    e.preventDefault();
+    const currentX = e.clientX;
+    const diff = currentX - swipeStartX;
+    setSwipeOffset(diff);
+  };
+
+  const handleMouseUp = (e) => {
+    if (!isSwipeActive || swipingInProgress) {
+      setIsSwipeActive(false); // Reset even if already in progress
+      setSwipeOffset(0);
+      return;
+    }
+    
+    e.preventDefault();
+    setIsSwipeActive(false);
+    
+    console.log('Mouse up - swipeOffset:', swipeOffset, 'threshold:', SWIPE_THRESHOLD);
+    
+    if (Math.abs(swipeOffset) > SWIPE_THRESHOLD) {
+      // Trigger like/dislike based on swipe direction
+      console.log('Swipe detected! Direction:', swipeOffset > 0 ? 'RIGHT (like)' : 'LEFT (dislike)');
+      if (swipeOffset > 0) {
+        handleSwipe(true); // Swipe right = like
+      } else {
+        handleSwipe(false); // Swipe left = dislike
+      }
+    } else {
+      console.log('Swipe too short, not triggering action');
+    }
+    
+    setSwipeOffset(0);
   };
 
   const handleQuit = () => {
@@ -845,6 +1161,61 @@ function App() {
         </div>
       )}
 
+      {screen === 'cuisine-selection' && (
+        <div style={{ padding: 40 }}>
+          <h2>Select Cuisines</h2>
+          <p style={{ color: '#666', marginBottom: 20 }}>
+            Found {unfilteredPlaces.length} places with {availableCuisines.length} different cuisine types. Select which cuisines to include:
+          </p>
+          
+          <div style={{ marginBottom: 20, display: 'flex', gap: 10 }}>
+            <button onClick={selectAllCuisines} style={{ padding: '8px 16px', fontSize: 14, background: '#50C878', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+              Select All
+            </button>
+            <button onClick={deselectAllCuisines} style={{ padding: '8px 16px', fontSize: 14, background: '#dc3545', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+              Deselect All
+            </button>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 30, maxHeight: 400, overflowY: 'auto', padding: 10, background: '#f8f9fa', borderRadius: 8 }}>
+            {availableCuisines.map(cuisine => (
+              <label key={cuisine} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, background: '#fff', borderRadius: 6, cursor: 'pointer', border: selectedCuisines.includes(cuisine) ? '2px solid #4A90E2' : '2px solid transparent' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedCuisines.includes(cuisine)}
+                  onChange={() => toggleCuisine(cuisine)}
+                  style={{ width: 18, height: 18, cursor: 'pointer' }}
+                />
+                <span style={{ textTransform: 'capitalize' }}>
+                  {cuisine === 'other' ? 'Other / No cuisine listed' : cuisine}
+                </span>
+              </label>
+            ))}
+          </div>
+          
+          {availableCuisines.length === 0 && (
+            <p style={{ color: '#856404', background: '#fff3cd', padding: 15, borderRadius: 6, marginBottom: 20 }}>
+              ⚠️ No cuisine information available for places in this area. Proceeding will show all places.
+            </p>
+          )}
+          
+          <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+            <button 
+              onClick={handleApplyCuisineFilter} 
+              style={{ padding: '15px 30px', fontSize: 16, background: '#4A90E2', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', flex: 1 }}
+            >
+              Continue ({selectedCuisines.length} cuisine{selectedCuisines.length !== 1 ? 's' : ''} selected)
+            </button>
+            <button 
+              onClick={() => setScreen('parameters')} 
+              style={{ padding: '15px 30px', fontSize: 16, background: '#6c757d', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}
+            >
+              Back
+            </button>
+          </div>
+        </div>
+      )}
+
       {screen === 'qrcode' && (
         <div style={{ textAlign: 'center', padding: 40 }}>
           <h2>Session Created!</h2>
@@ -928,19 +1299,88 @@ function App() {
         </div>
       ) : (simulationMode ? userIndexes[activeUser] : currentIndex) < places.length ? (
         <div>
-          <div onClick={() => handleCardClick(places[simulationMode ? userIndexes[activeUser] : currentIndex].place_id)}>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 20 }}>
+            <button 
+              onClick={() => handleSwipe(false)} 
+              disabled={swipingInProgress}
+              style={{ padding: '15px 40px', fontSize: 18, background: '#dc3545', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              👎 Dislike
+            </button>
+            <button 
+              onClick={() => handleSwipe(true)} 
+              disabled={swipingInProgress}
+              style={{ padding: '15px 40px', fontSize: 18, background: '#50C878', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              👍 Like
+            </button>
+          </div>
+          {!simulationMode && lastAction && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 15 }}>
+              <button 
+                onClick={handleUndo}
+                disabled={swipingInProgress}
+                style={{ padding: '10px 30px', fontSize: 16, background: '#ffc107', color: '#333', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                ↶ Undo
+              </button>
+            </div>
+          )}
+          <div 
+            onClick={() => handleCardClick(places[simulationMode ? userIndexes[activeUser] : currentIndex].place_id)}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            style={{
+              transform: `translateX(${swipeOffset}px) rotate(${swipeOffset * 0.05}deg)`,
+              transition: isSwipeActive ? 'none' : 'transform 0.3s ease',
+              cursor: 'grab',
+              userSelect: 'none'
+            }}
+          >
             <h2>{places[simulationMode ? userIndexes[activeUser] : currentIndex].name}</h2>
             {places[simulationMode ? userIndexes[activeUser] : currentIndex].image_url && (
               <div style={{ marginTop: 8 }}>
                 <img src={places[simulationMode ? userIndexes[activeUser] : currentIndex].image_url} alt={places[simulationMode ? userIndexes[activeUser] : currentIndex].name} style={{ maxWidth: '100%', height: 'auto', borderRadius: 6 }} />
               </div>
             )}
-            {places[simulationMode ? userIndexes[activeUser] : currentIndex].address && (
-              <p style={{ marginTop: 6, color: '#444' }}>{places[simulationMode ? userIndexes[activeUser] : currentIndex].address}</p>
-            )}
+            <div style={{ marginTop: 12, padding: '12px', background: '#f8f9fa', borderRadius: 6 }}>
+              {places[simulationMode ? userIndexes[activeUser] : currentIndex].address && (
+                <p style={{ margin: '4px 0', color: '#444', fontSize: 14 }}>
+                  <strong>📍 Address:</strong> {places[simulationMode ? userIndexes[activeUser] : currentIndex].address}
+                </p>
+              )}
+              {places[simulationMode ? userIndexes[activeUser] : currentIndex].cuisine && (
+                <p style={{ margin: '4px 0', color: '#444', fontSize: 14 }}>
+                  <strong>🍽️ Cuisine:</strong> {places[simulationMode ? userIndexes[activeUser] : currentIndex].cuisine}
+                </p>
+              )}
+              {places[simulationMode ? userIndexes[activeUser] : currentIndex].priceRange && (
+                <p style={{ margin: '4px 0', color: '#444', fontSize: 14 }}>
+                  <strong>💰 Price:</strong> {places[simulationMode ? userIndexes[activeUser] : currentIndex].priceRange}
+                </p>
+              )}
+              {places[simulationMode ? userIndexes[activeUser] : currentIndex].stars && (
+                <p style={{ margin: '4px 0', color: '#444', fontSize: 14 }}>
+                  <strong>⭐ Rating:</strong> {places[simulationMode ? userIndexes[activeUser] : currentIndex].stars.toFixed(1)} stars
+                </p>
+              )}
+              {places[simulationMode ? userIndexes[activeUser] : currentIndex].phone && (
+                <p style={{ margin: '4px 0', color: '#444', fontSize: 14 }}>
+                  <strong>📞 Phone:</strong> {places[simulationMode ? userIndexes[activeUser] : currentIndex].phone}
+                </p>
+              )}
+              {places[simulationMode ? userIndexes[activeUser] : currentIndex].website && (
+                <p style={{ margin: '4px 0', color: '#444', fontSize: 14 }}>
+                  <strong>🌐 Website:</strong> <a href={places[simulationMode ? userIndexes[activeUser] : currentIndex].website} target="_blank" rel="noopener noreferrer" style={{ color: '#4A90E2' }}>{places[simulationMode ? userIndexes[activeUser] : currentIndex].website}</a>
+                </p>
+              )}
+            </div>
           </div>
-          <button onClick={() => handleSwipe(true)} disabled={swipingInProgress}>Like</button>
-          <button onClick={() => handleSwipe(false)} disabled={swipingInProgress}>Dislike</button>
         </div>
       ) : (
         <div>
