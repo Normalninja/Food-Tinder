@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { fetchPlacesOSM } from './api/overpass';
 import opening_hours from 'opening_hours';
 import * as sessionAPI from './session';
+import { Timestamp } from 'firebase/firestore';
 
 function App() {
   const [screen, setScreen] = useState('menu'); // menu, parameters, qrcode, swipe, consensus
@@ -292,7 +293,7 @@ function App() {
       // Get existing session FIRST to preserve votes, dislikes, and participants
       let existingVotes = {};
       let existingDislikes = {};
-      let existingParticipants = { [newUserID]: { joined_at: Date.now() } };
+      let existingParticipants = { [newUserID]: { joined_at: Timestamp.now() } };
       try {
         const existingSession = await sessionAPI.getSession(newSessionID);
         console.log('Existing session found:', existingSession ? 'yes' : 'no');
@@ -320,7 +321,7 @@ function App() {
         session_id: newSessionID,
         origin: { lat: latitude, lon: longitude },
         radius: distanceInMeters,
-        created_at: Date.now(),
+        created_at: Timestamp.now(), // Use Firestore Timestamp for TTL
         places: [],
         participants: existingParticipants,
         votes: existingVotes,  // Preserve existing votes
