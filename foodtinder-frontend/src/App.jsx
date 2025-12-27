@@ -107,6 +107,20 @@ function App() {
     } else {
       setLocationError('Geolocation is not supported by this browser.');
     }
+    
+    // Check for session query parameter and auto-join
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionParam = urlParams.get('session');
+    if (sessionParam) {
+      console.log('Auto-joining session from URL:', sessionParam);
+      setJoinSessionInput(sessionParam);
+      // Clear the query parameter from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Trigger join after a short delay to ensure state is ready
+      setTimeout(() => {
+        handleJoinSession(sessionParam);
+      }, 500);
+    }
 
     // This client-only prototype uses Overpass + optional Firebase/localStorage for sessions.
     // WebSocket backend is not required. We keep a ref for potential future peer signaling.
@@ -175,20 +189,22 @@ function App() {
     return 'user-' + Math.random().toString(36).substr(2, 9);
   };
 
-  const handleJoinSession = async () => {
-    if (!joinSessionInput.trim()) {
+  const handleJoinSession = async (sessionIdParam = null) => {
+    const sessionIdToJoin = sessionIdParam || joinSessionInput.trim();
+    
+    if (!sessionIdToJoin) {
       alert('Please enter a session ID');
       return;
     }
     
     const newUserID = generateUserID();
     setUserID(newUserID);
-    setSessionID(joinSessionInput.trim());
+    setSessionID(sessionIdToJoin);
     setIsSessionCreator(false); // Joining user is not the creator
     
     try {
-      console.log('Attempting to join session:', joinSessionInput.trim());
-      const session = await sessionAPI.getSession(joinSessionInput.trim());
+      console.log('Attempting to join session:', sessionIdToJoin);
+      const session = await sessionAPI.getSession(sessionIdToJoin);
       console.log('Session data:', session);
       
       if (!session) {
@@ -209,7 +225,7 @@ function App() {
           [newUserID]: { joined_at: Timestamp.now() }
         }
       };
-      await sessionAPI.createSession(joinSessionInput.trim(), updatedSession);
+      await sessionAPI.createSession(sessionIdToJoin, updatedSession);
       
       console.log('Setting places for joined session:', session.places.length);
       
@@ -836,7 +852,7 @@ function App() {
           
           <p style={{ fontWeight: 'bold', marginBottom: 10 }}>Scan QR Code:</p>
           <div style={{ background: '#fff', padding: 20, display: 'inline-block', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-            <QRCodeSVG value={window.location.origin + '?session=' + sessionID} size={256} />
+            <QRCodeSVG value={window.location.origin + window.location.pathname + '?session=' + sessionID} size={256} />
           </div>
           
           <p style={{ marginTop: 30, fontWeight: 'bold' }}>Or share Session ID:</p>
