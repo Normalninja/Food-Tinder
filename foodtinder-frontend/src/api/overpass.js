@@ -74,6 +74,17 @@ export async function fetchPlacesOSM(lat, lon, radiusMeters = 1000, opts = {}) {
           stars = null;
         }
         
+        // Extract image URL if available
+        let imageUrl = null;
+        if (tags['image']) {
+          imageUrl = tags['image'];
+        } else if (tags['wikimedia_commons']) {
+          // Convert Wikimedia Commons filename to URL
+          // Format: File:Example.jpg -> https://commons.wikimedia.org/wiki/Special:FilePath/Example.jpg
+          const filename = tags['wikimedia_commons'].replace(/^File:/, '');
+          imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(filename)}`;
+        }
+        
         return {
           place_id: `${el.type}/${el.id}`,
           osm_type: el.type,
@@ -88,7 +99,8 @@ export async function fetchPlacesOSM(lat, lon, radiusMeters = 1000, opts = {}) {
           phone: tags?.phone || null,
           address: address,
           priceRange: priceRange,
-          stars: stars
+          stars: stars,
+          image_url: imageUrl
         };
       });
 

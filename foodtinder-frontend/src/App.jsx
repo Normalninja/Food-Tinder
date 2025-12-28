@@ -1343,11 +1343,13 @@ function App() {
             }}
           >
             <h2>{places[simulationMode ? userIndexes[activeUser] : currentIndex].name}</h2>
-            {places[simulationMode ? userIndexes[activeUser] : currentIndex].image_url && (
-              <div style={{ marginTop: 8 }}>
-                <img src={places[simulationMode ? userIndexes[activeUser] : currentIndex].image_url} alt={places[simulationMode ? userIndexes[activeUser] : currentIndex].name} style={{ maxWidth: '100%', height: 'auto', borderRadius: 6 }} />
-              </div>
-            )}
+            <div style={{ marginTop: 8 }}>
+              <img 
+                src={places[simulationMode ? userIndexes[activeUser] : currentIndex].image_url || `https://via.placeholder.com/400x300/4A90E2/FFFFFF?text=${encodeURIComponent(places[simulationMode ? userIndexes[activeUser] : currentIndex].name)}`} 
+                alt={places[simulationMode ? userIndexes[activeUser] : currentIndex].name} 
+                style={{ maxWidth: '100%', height: 'auto', borderRadius: 6 }} 
+              />
+            </div>
             <div style={{ marginTop: 12, padding: '12px', background: '#f8f9fa', borderRadius: 6 }}>
               {places[simulationMode ? userIndexes[activeUser] : currentIndex].address && (
                 <p style={{ margin: '4px 0', color: '#444', fontSize: 14 }}>
