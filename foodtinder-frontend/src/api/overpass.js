@@ -1,5 +1,6 @@
 // Minimal Overpass helper to fetch nearby food places
 import { getCache, setCache, makePlacesKey } from './cache';
+import { enrichPlacesWithGoogle } from './googlePlaces';
 
 // Primary and fallback Overpass endpoints
 const OVERPASS_ENDPOINTS = [
@@ -163,30 +164,35 @@ export async function fetchPlacesOSM(lat, lon, radiusMeters = 1000, opts = {}) {
 
       const deduped = groups.length > 0 ? groups.map(g => g.repr) : places;
 
+      // Enrich places with Google Places data (price, rating, photos)
+      const enriched = await enrichPlacesWithGoogle(deduped);
+
       // Optionally augment each place with reverse-geocoded address and a static map image URL (best-effort)
       // Augmentation can be expensive (Nominatim requests); enable via opts.augment === true
       if (!opts.augment) {
-        setCache(cacheKey, deduped, opts.ttlMs);
-        return deduped;
+        setCache(cacheKey, enriched, opts.ttlMs);
+        return enriched;
       }
       
       // Augment each place with placeholder images (no address fetching for speed)
       function augmentPlace(place) {
         const out = { ...place };
-        // Use placehold.co for reliable placeholder images with place names (no network call needed)
-        const placeName = (out.name || 'Place').substring(0, 30); // Limit length for URL
-        out.image_url = `https://placehold.co/400x300/4A90E2/FFFFFF?text=${encodeURIComponent(placeName)}`;
+        // Only add placeholder if no image_url from Google or OSM
+        if (!out.image_url) {
+          const placeName = (out.name || 'Place').substring(0, 30); // Limit length for URL
+          out.image_url = `https://placehold.co/400x300/4A90E2/FFFFFF?text=${encodeURIComponent(placeName)}`;
+        }
         return out;
       }
 
       const augmented = [];
-      for (let i = 0; i < deduped.length; i++) {
-        const item = augmentPlace(deduped[i]);
+      for (let i = 0; i < enriched.length; i++) {
+        const item = augmentPlace(enriched[i]);
         augmented.push(item);
         // Report progress to caller if requested
         try {
           if (opts && typeof opts.onProgress === 'function') {
-            opts.onProgress(i + 1, deduped.length);
+            opts.onProgress(i + 1, enriched.length);
           }
         } catch (e) { /* ignore progress errors */ }
       }

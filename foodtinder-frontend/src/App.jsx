@@ -37,6 +37,8 @@ function App() {
   const [unfilteredPlaces, setUnfilteredPlaces] = useState([]); // All places before cuisine filter
   const [availableCuisines, setAvailableCuisines] = useState([]); // Unique cuisines from search
   const [selectedCuisines, setSelectedCuisines] = useState([]); // User-selected cuisines to include
+  const [selectedPriceLevels, setSelectedPriceLevels] = useState([0, 1, 2, 3, 4]); // Price levels to include (0-4)
+  const [minRating, setMinRating] = useState(0); // Minimum rating filter (0-5)
   const [swipeOffset, setSwipeOffset] = useState(0); // X offset for swipe animation
   const [isSwipeActive, setIsSwipeActive] = useState(false); // Track if user is actively swiping
   const [swipeStartX, setSwipeStartX] = useState(0); // Starting X position of swipe
@@ -897,12 +899,12 @@ function App() {
 
   const handleApplyCuisineFilter = async () => {
     try {
-      // Filter places based on selected cuisines
+      // Filter places based on selected cuisines, price levels, and rating
       let filteredPlaces = unfilteredPlaces;
       
       if (selectedCuisines.length > 0 && selectedCuisines.length < availableCuisines.length) {
         // Only filter if not all cuisines are selected
-        filteredPlaces = unfilteredPlaces.filter(place => {
+        filteredPlaces = filteredPlaces.filter(place => {
           if (!place.cuisine) {
             // Include places without cuisine if 'other' is selected
             return selectedCuisines.includes('other');
@@ -914,10 +916,30 @@ function App() {
         });
       }
       
-      console.log('Filtered to', filteredPlaces.length, 'places with selected cuisines');
+      // Filter by price level
+      if (selectedPriceLevels.length < 5) {
+        filteredPlaces = filteredPlaces.filter(place => {
+          const priceLevel = place.priceLevel;
+          // If no price data, include it (don't filter out)
+          if (priceLevel === null || priceLevel === undefined) return true;
+          return selectedPriceLevels.includes(priceLevel);
+        });
+      }
+      
+      // Filter by minimum rating
+      if (minRating > 0) {
+        filteredPlaces = filteredPlaces.filter(place => {
+          const rating = place.rating || place.stars;
+          // If no rating data, include it (don't filter out)
+          if (!rating) return true;
+          return rating >= minRating;
+        });
+      }
+      
+      console.log('Filtered to', filteredPlaces.length, 'places with selected filters');
       
       if (filteredPlaces.length === 0) {
-        alert('No places found with the selected cuisines. Please select more cuisines.');
+        alert('No places found with the selected filters. Please adjust your selections.');
         return;
       }
       
@@ -972,6 +994,20 @@ function App() {
 
   const deselectAllCuisines = () => {
     setSelectedCuisines([]);
+  };
+
+  const togglePriceLevel = (level) => {
+    setSelectedPriceLevels(prev => {
+      if (prev.includes(level)) {
+        return prev.filter(l => l !== level);
+      } else {
+        return [...prev, level].sort((a, b) => a - b);
+      }
+    });
+  };
+
+  const selectAllPriceLevels = () => {
+    setSelectedPriceLevels([0, 1, 2, 3, 4]);
   };
 
   // Swipe gesture handlers
@@ -1163,34 +1199,81 @@ function App() {
 
       {screen === 'cuisine-selection' && (
         <div style={{ padding: 40 }}>
-          <h2>Select Cuisines</h2>
+          <h2>Filter Restaurants</h2>
           <p style={{ color: '#666', marginBottom: 20 }}>
-            Found {unfilteredPlaces.length} places with {availableCuisines.length} different cuisine types. Select which cuisines to include:
+            Found {unfilteredPlaces.length} places. Use the filters below to narrow down your options:
           </p>
           
-          <div style={{ marginBottom: 20, display: 'flex', gap: 10 }}>
-            <button onClick={selectAllCuisines} style={{ padding: '8px 16px', fontSize: 14, background: '#50C878', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              Select All
-            </button>
-            <button onClick={deselectAllCuisines} style={{ padding: '8px 16px', fontSize: 14, background: '#dc3545', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              Deselect All
-            </button>
+          {/* Cuisine Filter */}
+          <div style={{ marginBottom: 30 }}>
+            <h3 style={{ marginBottom: 10 }}>Cuisines ({availableCuisines.length} types available)</h3>
+            <div style={{ marginBottom: 10, display: 'flex', gap: 10 }}>
+              <button onClick={selectAllCuisines} style={{ padding: '8px 16px', fontSize: 14, background: '#50C878', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+                Select All
+              </button>
+              <button onClick={deselectAllCuisines} style={{ padding: '8px 16px', fontSize: 14, background: '#dc3545', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+                Deselect All
+              </button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, maxHeight: 300, overflowY: 'auto', padding: 10, background: '#f8f9fa', borderRadius: 8 }}>
+              {availableCuisines.map(cuisine => (
+                <label key={cuisine} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, background: '#fff', borderRadius: 6, cursor: 'pointer', border: selectedCuisines.includes(cuisine) ? '2px solid #4A90E2' : '2px solid transparent' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedCuisines.includes(cuisine)}
+                    onChange={() => toggleCuisine(cuisine)}
+                    style={{ width: 18, height: 18, cursor: 'pointer' }}
+                  />
+                  <span style={{ textTransform: 'capitalize' }}>
+                    {cuisine === 'other' ? 'Other / No cuisine listed' : cuisine}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 30, maxHeight: 400, overflowY: 'auto', padding: 10, background: '#f8f9fa', borderRadius: 8 }}>
-            {availableCuisines.map(cuisine => (
-              <label key={cuisine} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, background: '#fff', borderRadius: 6, cursor: 'pointer', border: selectedCuisines.includes(cuisine) ? '2px solid #4A90E2' : '2px solid transparent' }}>
-                <input
-                  type="checkbox"
-                  checked={selectedCuisines.includes(cuisine)}
-                  onChange={() => toggleCuisine(cuisine)}
-                  style={{ width: 18, height: 18, cursor: 'pointer' }}
-                />
-                <span style={{ textTransform: 'capitalize' }}>
-                  {cuisine === 'other' ? 'Other / No cuisine listed' : cuisine}
-                </span>
-              </label>
-            ))}
+
+          {/* Price Level Filter */}
+          <div style={{ marginBottom: 30 }}>
+            <h3 style={{ marginBottom: 10 }}>Price Range</h3>
+            <div style={{ marginBottom: 10 }}>
+              <button onClick={selectAllPriceLevels} style={{ padding: '8px 16px', fontSize: 14, background: '#50C878', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+                Select All Prices
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {[0, 1, 2, 3, 4].map(level => (
+                <label key={level} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, background: selectedPriceLevels.includes(level) ? '#4A90E2' : '#fff', color: selectedPriceLevels.includes(level) ? '#fff' : '#000', borderRadius: 6, cursor: 'pointer', border: '2px solid #4A90E2', minWidth: 80, justifyContent: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedPriceLevels.includes(level)}
+                    onChange={() => togglePriceLevel(level)}
+                    style={{ width: 18, height: 18, cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: 18, fontWeight: 'bold' }}>
+                    {level === 0 ? 'Free' : '$'.repeat(level)}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Minimum Rating Filter */}
+          <div style={{ marginBottom: 30 }}>
+            <h3 style={{ marginBottom: 10 }}>Minimum Rating</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              <input
+                type="range"
+                min="0"
+                max="5"
+                step="0.5"
+                value={minRating}
+                onChange={(e) => setMinRating(parseFloat(e.target.value))}
+                style={{ flex: 1, cursor: 'pointer' }}
+              />
+              <div style={{ minWidth: 120, fontSize: 18, fontWeight: 'bold', color: '#4A90E2' }}>
+                {minRating === 0 ? 'Any Rating' : `${minRating}+ ⭐`}
+              </div>
+            </div>
           </div>
           
           {availableCuisines.length === 0 && (
@@ -1204,7 +1287,7 @@ function App() {
               onClick={handleApplyCuisineFilter} 
               style={{ padding: '15px 30px', fontSize: 16, background: '#4A90E2', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', flex: 1 }}
             >
-              Continue ({selectedCuisines.length} cuisine{selectedCuisines.length !== 1 ? 's' : ''} selected)
+              Continue with Filters
             </button>
             <button 
               onClick={() => setScreen('parameters')} 
@@ -1361,14 +1444,21 @@ function App() {
                   <strong>🍽️ Cuisine:</strong> {places[simulationMode ? userIndexes[activeUser] : currentIndex].cuisine}
                 </p>
               )}
-              {places[simulationMode ? userIndexes[activeUser] : currentIndex].priceRange && (
+              {(places[simulationMode ? userIndexes[activeUser] : currentIndex].priceLevel !== undefined && places[simulationMode ? userIndexes[activeUser] : currentIndex].priceLevel !== null) ? (
+                <p style={{ margin: '4px 0', color: '#444', fontSize: 14 }}>
+                  <strong>💰 Price:</strong> {'$'.repeat(places[simulationMode ? userIndexes[activeUser] : currentIndex].priceLevel || 1)}
+                </p>
+              ) : places[simulationMode ? userIndexes[activeUser] : currentIndex].priceRange && (
                 <p style={{ margin: '4px 0', color: '#444', fontSize: 14 }}>
                   <strong>💰 Price:</strong> {places[simulationMode ? userIndexes[activeUser] : currentIndex].priceRange}
                 </p>
               )}
-              {places[simulationMode ? userIndexes[activeUser] : currentIndex].stars && (
+              {(places[simulationMode ? userIndexes[activeUser] : currentIndex].rating || places[simulationMode ? userIndexes[activeUser] : currentIndex].stars) && (
                 <p style={{ margin: '4px 0', color: '#444', fontSize: 14 }}>
-                  <strong>⭐ Rating:</strong> {places[simulationMode ? userIndexes[activeUser] : currentIndex].stars.toFixed(1)} stars
+                  <strong>⭐ Rating:</strong> {(places[simulationMode ? userIndexes[activeUser] : currentIndex].rating || places[simulationMode ? userIndexes[activeUser] : currentIndex].stars).toFixed(1)} stars
+                  {places[simulationMode ? userIndexes[activeUser] : currentIndex].userRatingsTotal && (
+                    <span style={{ color: '#888', fontSize: 12 }}> ({places[simulationMode ? userIndexes[activeUser] : currentIndex].userRatingsTotal} reviews)</span>
+                  )}
                 </p>
               )}
               {places[simulationMode ? userIndexes[activeUser] : currentIndex].phone && (
