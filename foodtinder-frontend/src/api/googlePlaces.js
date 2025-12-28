@@ -95,9 +95,10 @@ function setCachedPlace(name, lat, lon, data) {
 }
 
 // Fetch photo from Google and convert to base64 data URL for caching
-async function fetchPhotoAsBase64(photoReference) {
+async function fetchPhotoAsBase64(photoName) {
   try {
-    const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photoReference}&key=${GOOGLE_API_KEY}`;
+    // Use the photo name to get the media
+    const photoUrl = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=400&key=${GOOGLE_API_KEY}`;
     const response = await fetch(photoUrl);
     if (!response.ok) return null;
     
@@ -131,26 +132,46 @@ async function searchGooglePlace(name, lat, lon) {
     const currentUsage = incrementApiUsage();
     console.log(`Google API call ${currentUsage}/${MONTHLY_API_CALL_LIMIT} this month`);
     
-    // Use Text Search API to find the place
-    const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(name)}&location=${lat},${lon}&radius=50&type=restaurant&key=${GOOGLE_API_KEY}`;
+    // Use Places API (New) - Text Search endpoint with CORS support
+    const searchUrl = `https://places.googleapis.com/v1/places:searchText`;
     
-    const searchResponse = await fetch(searchUrl);
+    const searchResponse = await fetch(searchUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_API_KEY,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.priceLevel,places.rating,places.userRatingCount,places.photos'
+      },
+      body: JSON.stringify({
+        textQuery: name,
+        locationBias: {
+          circle: {
+            center: {
+              latitude: lat,
+              longitude: lon
+            },
+            radius: 50.0
+          }
+        }
+      })
+    });
+    
     const searchData = await searchResponse.json();
     
-    if (searchData.status !== 'OK' || !searchData.results || searchData.results.length === 0) {
+    if (!searchData.places || searchData.places.length === 0) {
       console.log(`No Google Places result for: ${name}`);
       return null;
     }
     
-    const place = searchData.results[0];
+    const place = searchData.places[0];
     
     // Fetch and cache photo as base64 if available
     let photoDataUrl = null;
     if (place.photos && place.photos.length > 0) {
       // Check limit again before photo fetch
       if (!hasReachedApiLimit()) {
-        const photoReference = place.photos[0].photo_reference;
-        photoDataUrl = await fetchPhotoAsBase64(photoReference);
+        const photoName = place.photos[0].name;
+        photoDataUrl = await fetchPhotoAsBase64(photoName);
         // Increment for photo request
         if (photoDataUrl) {
           incrementApiUsage();
@@ -160,12 +181,25 @@ async function searchGooglePlace(name, lat, lon) {
       }
     }
     
+    // Convert price level string to number (0-4)
+    let priceLevel = null;
+    if (place.priceLevel) {
+      const priceLevelMap = {
+        'PRICE_LEVEL_FREE': 0,
+        'PRICE_LEVEL_INEXPENSIVE': 1,
+        'PRICE_LEVEL_MODERATE': 2,
+        'PRICE_LEVEL_EXPENSIVE': 3,
+        'PRICE_LEVEL_VERY_EXPENSIVE': 4
+      };
+      priceLevel = priceLevelMap[place.priceLevel] !== undefined ? priceLevelMap[place.priceLevel] : null;
+    }
+    
     return {
-      googlePlaceId: place.place_id,
-      priceLevel: place.price_level !== undefined ? place.price_level : null,
+      googlePlaceId: place.id,
+      priceLevel: priceLevel,
       rating: place.rating || null,
       photoUrl: photoDataUrl,
-      userRatingsTotal: place.user_ratings_total || null
+      userRatingsTotal: place.userRatingCount || null
     };
   } catch (error) {
     console.error(`Error fetching Google Places data for ${name}:`, error);
