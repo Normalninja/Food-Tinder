@@ -1,7 +1,22 @@
 // Google Places API integration with localStorage caching
+import { getPlaceFromDB, savePlaceToDB } from './placesDB';
+
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
 const CACHE_DURATION_DAYS = 30; // Cache Google data for 30 days
 const MONTHLY_API_CALL_LIMIT = 5000; // Conservative limit to stay within free tier ($200/month credit)
+
+// Calculate distance between two coordinates in kilometers (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
 
 // API usage tracking
 function getApiUsageData() {
@@ -140,23 +155,43 @@ async function searchGooglePlace(name, lat, lon) {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_API_KEY,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.priceLevel,places.rating,places.userRatingCount,places.photos'
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.priceLevel,places.rating,places.userRatingCount,places.photos,places.location'
       },
       body: JSON.stringify({
-        textQuery: name,
+        textQuery: `${name} restaurant`,
         locationBias: {
           circle: {
             center: {
               latitude: lat,
               longitude: lon
             },
-            radius: 50.0
+            radius: 100.0
           }
-        }
+        },
+        maxResultCount: 1
       })
     });
     
     const searchData = await searchResponse.json();
+    
+    if (!searchData.places || searchData.places.length === 0) {
+      console.log(`No Google Places result for: ${name}`);
+      return null;
+    }
+    
+    const place = searchData.places[0];
+    
+    // Verify the place is actually close to our coordinates (within ~200m)
+    if (place.location) {
+      const distance = calculateDistance(
+        lat, lon,
+        place.location.latitude, place.location.longitude
+      );
+      if (distance > 0.2) { // More than 200 meters away
+        console.log(`Google Places result too far (${distance.toFixed(2)}km) for: ${name}`);
+        return null;
+      }
+    }
     
     if (!searchData.places || searchData.places.length === 0) {
       console.log(`No Google Places result for: ${name}`);
@@ -210,14 +245,33 @@ async function searchGooglePlace(name, lat, lon) {
 // Enrich a single place with Google data
 export async function enrichPlaceWithGoogle(place) {
   // Check if we already have Google data
-  if (place.googleEnriched) {
+  if (place.googleEnriched || place.firebaseEnriched) {
     return place;
   }
 
-  // Check cache first
+  // Check Firebase first (persistent cache across sessions)
+  const firebaseData = await getPlaceFromDB(place.name, place.lat, place.lon);
+  if (firebaseData) {
+    console.log(`Using Firebase cached data for: ${place.name}`);
+    return {
+      ...place,
+      priceLevel: firebaseData.priceLevel !== null ? firebaseData.priceLevel : place.priceRange,
+      rating: firebaseData.rating !== null ? firebaseData.rating : place.stars,
+      image_url: firebaseData.photoUrl || place.image_url,
+      userRatingsTotal: firebaseData.userRatingsTotal,
+      googlePlaceId: firebaseData.googlePlaceId,
+      googleEnriched: true,
+      firebaseEnriched: true
+    };
+  }
+
+  // Check localStorage cache (browser-specific cache)
   const cached = getCachedPlace(place.name, place.lat, place.lon);
   if (cached) {
-    console.log(`Using cached Google data for: ${place.name}`);
+    console.log(`Using localStorage cached data for: ${place.name}`);
+    // Also save to Firebase for persistence across sessions
+    await savePlaceToDB(place.name, place.lat, place.lon, cached);
+    
     return {
       ...place,
       priceLevel: cached.priceLevel !== null ? cached.priceLevel : place.priceRange,
@@ -228,12 +282,13 @@ export async function enrichPlaceWithGoogle(place) {
     };
   }
 
-  // Fetch from Google if not cached
+  // Fetch from Google if not cached anywhere
   const googleData = await searchGooglePlace(place.name, place.lat, place.lon);
   
   if (googleData) {
-    // Cache the data
+    // Cache in both localStorage and Firebase
     setCachedPlace(place.name, place.lat, place.lon, googleData);
+    await savePlaceToDB(place.name, place.lat, place.lon, googleData);
     
     // Merge with place data (Google data takes precedence)
     return {
@@ -242,7 +297,10 @@ export async function enrichPlaceWithGoogle(place) {
       rating: googleData.rating !== null ? googleData.rating : place.stars,
       image_url: googleData.photoUrl || place.image_url,
       userRatingsTotal: googleData.userRatingsTotal,
+      googlePlaceId: googleData.googlePlaceId,
       googleEnriched: true
+    };
+  }
     };
   }
 

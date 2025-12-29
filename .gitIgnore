@@ -4,3 +4,6 @@
 # Ignore VS Code settings
 .vscode/
 secrets.yaml
+
+# Ignore test files with API keys
+test-google-api.html
