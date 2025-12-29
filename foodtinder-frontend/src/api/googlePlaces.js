@@ -181,6 +181,20 @@ async function searchGooglePlace(name, lat, lon) {
     
     const place = searchData.places[0];
     
+    // Validate that the Google Place name matches the OSM name
+    const googleName = (place.displayName?.text || '').toLowerCase().trim();
+    const osmName = name.toLowerCase().trim();
+    
+    // Check if names are similar enough (either exact match or one contains the other)
+    const nameMatches = googleName === osmName || 
+                       googleName.includes(osmName) || 
+                       osmName.includes(googleName);
+    
+    if (!nameMatches) {
+      console.log(`Google Places name mismatch: "${googleName}" vs "${osmName}"`);
+      return null;
+    }
+    
     // Verify the place is actually close to our coordinates (within ~100m for better accuracy)
     if (place.location) {
       const distance = calculateDistance(
