@@ -5,7 +5,7 @@ import { getChainLogo } from './chainLogos';
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
 const CACHE_DURATION_DAYS = 30; // Cache Google data for 30 days
 const MONTHLY_API_CALL_LIMIT = 5000; // Conservative limit to stay within free tier ($200/month credit)
-const CACHE_VERSION = 2; // Increment this to invalidate all old cache entries
+const CACHE_VERSION = 3; // Increment this to invalidate all old cache entries
 
 // Utility to clear all Google Places cache (useful after algorithm changes)
 export function clearAllGoogleCache() {
@@ -257,7 +257,7 @@ async function searchGooglePlace(name, lat, lon) {
     let photoDataUrl = getChainLogo(name);
     
     if (photoDataUrl) {
-      console.log(`Using chain logo for: ${name}`);
+      console.log(`✓ Using chain logo for: ${name} → ${photoDataUrl.substring(0, 50)}...`);
     } else if (place.photos && place.photos.length > 0) {
       // Fall back to Google photo for non-chain restaurants
       if (!hasReachedApiLimit()) {
@@ -266,10 +266,13 @@ async function searchGooglePlace(name, lat, lon) {
         // Increment for photo request
         if (photoDataUrl) {
           incrementApiUsage();
+          console.log(`✓ Fetched Google photo for: ${name}`);
         }
       } else {
         console.log('API limit reached, skipping photo fetch');
       }
+    } else {
+      console.log(`No photo available for: ${name} (not a chain, no Google photos)`);
     }
     
     // Convert price level string to number (1-5 scale)
