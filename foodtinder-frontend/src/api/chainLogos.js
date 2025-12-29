@@ -49,40 +49,21 @@ const CHAIN_LOGOS = {
   "ben & jerry's": "https://logo.clearbit.com/benjerry.com",
 };
 
-// Fetch logo and convert to base64 data URL
-async function fetchLogoAsBase64(logoUrl) {
-  try {
-    const response = await fetch(logoUrl);
-    if (!response.ok) return null;
-    
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.warn(`Failed to fetch chain logo from ${logoUrl}:`, error);
-    return null;
-  }
-}
-
-// Check if a restaurant name matches a known chain and fetch logo
-export async function getChainLogo(restaurantName) {
+// Check if a restaurant name matches a known chain and return logo URL
+export function getChainLogo(restaurantName) {
   if (!restaurantName) return null;
   
   const nameLower = restaurantName.toLowerCase().trim();
   
   // Direct match
   if (CHAIN_LOGOS[nameLower]) {
-    return await fetchLogoAsBase64(CHAIN_LOGOS[nameLower]);
+    return CHAIN_LOGOS[nameLower];
   }
   
   // Check if the name contains a chain name
   for (const [chainName, logoUrl] of Object.entries(CHAIN_LOGOS)) {
     if (nameLower.includes(chainName)) {
-      return await fetchLogoAsBase64(logoUrl);
+      return logoUrl;
     }
   }
   

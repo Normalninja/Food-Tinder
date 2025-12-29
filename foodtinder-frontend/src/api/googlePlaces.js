@@ -253,8 +253,8 @@ async function searchGooglePlace(name, lat, lon) {
       }
     }
     
-    // Check for chain logo first (instant logo fetch, converted to base64)
-    let photoDataUrl = await getChainLogo(name);
+    // Check for chain logo first (returns URL directly, no fetch needed)
+    let photoDataUrl = getChainLogo(name);
     
     if (photoDataUrl) {
       console.log(`✓ Using chain logo for: ${name}`);
