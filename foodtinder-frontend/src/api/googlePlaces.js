@@ -229,10 +229,24 @@ async function searchGooglePlace(name, lat, lon) {
       }
     }
     
-    // Google Photos are unreliable (often show wrong images), so we disable them
-    // OSM images are more accurate for our use case
+    // Fetch and cache photo as base64 if available
+    // Prefer photos at index 1-3 (often better than the first) if available
     let photoDataUrl = null;
-    console.log('Skipping Google Photos (unreliable), using OSM image_url instead');
+    if (place.photos && place.photos.length > 0) {
+      // Check limit again before photo fetch
+      if (!hasReachedApiLimit()) {
+        // Try to get a better photo: use photo at index 1 or 2 if available, otherwise use first
+        const photoIndex = place.photos.length > 2 ? 1 : 0;
+        const photoName = place.photos[photoIndex].name;
+        photoDataUrl = await fetchPhotoAsBase64(photoName);
+        // Increment for photo request
+        if (photoDataUrl) {
+          incrementApiUsage();
+        }
+      } else {
+        console.log('API limit reached, skipping photo fetch');
+      }
+    }
     
     // Convert price level string to number (0-4)
     let priceLevel = null;
