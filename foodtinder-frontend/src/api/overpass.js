@@ -25,7 +25,8 @@ export async function fetchPlacesOSM(lat, lon, radiusMeters = 1000, opts = {}) {
     const cached = getCache(cacheKey);
     if (cached) {
       console.log('Returning cached OSM places:', cached.length);
-      return cached;
+      // Still enrich with Google Places data (uses its own cache system)
+      return await enrichPlacesWithGoogle(cached);
     }
   } else {
     console.log('Skipping OSM cache, fetching fresh places');
