@@ -187,7 +187,7 @@ async function searchGooglePlace(name, lat, lon) {
               latitude: lat,
               longitude: lon
             },
-            radius: 50.0
+            radius: 25.0
           }
         },
         maxResultCount: 1
@@ -217,13 +217,13 @@ async function searchGooglePlace(name, lat, lon) {
       return null;
     }
     
-    // Verify the place is actually close to our coordinates (within ~100m for better accuracy)
+    // Verify the place is actually close to our coordinates (within ~20m for very strict matching)
     if (place.location) {
       const distance = calculateDistance(
         lat, lon,
         place.location.latitude, place.location.longitude
       );
-      if (distance > 0.1) { // More than 100 meters away
+      if (distance > 0.02) { // More than 20 meters away
         console.log(`Google Places result too far (${distance.toFixed(2)}km) for: ${name}`);
         return null;
       }

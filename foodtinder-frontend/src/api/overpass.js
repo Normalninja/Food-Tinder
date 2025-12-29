@@ -180,15 +180,9 @@ export async function fetchPlacesOSM(lat, lon, radiusMeters = 1000, opts = {}) {
         return enriched;
       }
       
-      // Augment each place with placeholder images (no address fetching for speed)
+      // No placeholders - places without images will show no image
       function augmentPlace(place) {
-        const out = { ...place };
-        // Only add placeholder if no image_url from Google or OSM
-        if (!out.image_url) {
-          const placeName = (out.name || 'Place').substring(0, 30); // Limit length for URL
-          out.image_url = `https://placehold.co/400x300/4A90E2/FFFFFF?text=${encodeURIComponent(placeName)}`;
-        }
-        return out;
+        return { ...place };
       }
 
       const augmented = [];
