@@ -109,17 +109,14 @@ export async function fetchPlacesOSM(lat, lon, radiusMeters = 1000, opts = {}) {
       // Keep any place with a meaningful `name`; only actively discard when an
       // `amenity` tag explicitly indicates a non-food place.
       const allowedAmenities = new Set(['restaurant', 'cafe', 'fast_food', 'food_court', 'takeaway']);
-      const genericNames = new Set(['restaurant', 'hot dog', 'pizza', 'burger', 'food', 'cafe', 'bar']);
+      const genericNames = new Set(['restaurant', 'food', 'cafe', 'bar']);
       places = places.filter(p => {
         const name = (p.name || '').trim();
         if (!name) return false;
         if (name.toLowerCase() === 'unknown') return false;
         
-        // Filter out places with generic single-word names
+        // Filter out only very generic single-word names (keep specific food names like "pizza", "hot dog", etc.)
         if (genericNames.has(name.toLowerCase())) return false;
-        
-        // Filter out places without addresses (likely incomplete/bad data)
-        if (!p.address) return false;
         
         const amen = (p.tags && p.tags.amenity) ? String(p.tags.amenity).toLowerCase() : '';
         // If an amenity exists but is not a food-related amenity, discard it
