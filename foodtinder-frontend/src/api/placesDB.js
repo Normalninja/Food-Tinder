@@ -1,5 +1,5 @@
 // Firebase places collection for persistent storage
-import { db } from '../firebase';
+import { db } from '../session';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 const PLACES_COLLECTION = 'places';
