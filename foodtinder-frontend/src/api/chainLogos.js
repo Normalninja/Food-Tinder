@@ -4,66 +4,85 @@
 
 const CHAIN_LOGOS = {
   // Fast Food Chains
-  "mcdonald's": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/McDonald%27s_Golden_Arches.svg/200px-McDonald%27s_Golden_Arches.svg.png",
-  "burger king": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Burger_King_logo_%281999%29.svg/200px-Burger_King_logo_%281999%29.svg.png",
-  "wendy's": "https://upload.wikimedia.org/wikipedia/en/thumb/c/c1/Wendy%27s_logo_2013.svg/200px-Wendy%27s_logo_2013.svg.png",
-  "taco bell": "https://upload.wikimedia.org/wikipedia/en/thumb/b/b3/Taco_Bell_2016.svg/200px-Taco_Bell_2016.svg.png",
-  "kfc": "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/KFC_logo.svg/200px-KFC_logo.svg.png",
-  "subway": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Subway_2016_logo.svg/200px-Subway_2016_logo.svg.png",
-  "pizza hut": "https://upload.wikimedia.org/wikipedia/en/thumb/d/d2/Pizza_Hut_logo.svg/200px-Pizza_Hut_logo.svg.png",
-  "domino's": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Domino%27s_pizza_logo.svg/200px-Domino%27s_pizza_logo.svg.png",
-  "papa john's": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Papa_John%27s_Logo.svg/200px-Papa_John%27s_Logo.svg.png",
-  "little caesars": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Little_Caesars_logo_2017.svg/200px-Little_Caesars_logo_2017.svg.png",
-  "arby's": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Arby%27s_logo.svg/200px-Arby%27s_logo.svg.png",
-  "sonic": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Sonic_Drive-In_logo.svg/200px-Sonic_Drive-In_logo.svg.png",
-  "chick-fil-a": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Chick-fil-A_Logo.svg/200px-Chick-fil-A_Logo.svg.png",
-  "popeyes": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Popeyes_logo.svg/200px-Popeyes_logo.svg.png",
-  "chipotle": "https://upload.wikimedia.org/wikipedia/en/thumb/3/3b/Chipotle_Mexican_Grill_logo.svg/200px-Chipotle_Mexican_Grill_logo.svg.png",
-  "five guys": "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/Five_Guys_logo.svg/200px-Five_Guys_logo.svg.png",
-  "jimmy john's": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Jimmy_John%27s_logo.svg/200px-Jimmy_John%27s_logo.svg.png",
-  "panda express": "https://upload.wikimedia.org/wikipedia/en/thumb/8/84/Panda_Express_logo.svg/200px-Panda_Express_logo.svg.png",
+  "mcdonald's": "https://logo.clearbit.com/mcdonalds.com",
+  "burger king": "https://logo.clearbit.com/bk.com",
+  "wendy's": "https://logo.clearbit.com/wendys.com",
+  "taco bell": "https://logo.clearbit.com/tacobell.com",
+  "kfc": "https://logo.clearbit.com/kfc.com",
+  "subway": "https://logo.clearbit.com/subway.com",
+  "pizza hut": "https://logo.clearbit.com/pizzahut.com",
+  "domino's": "https://logo.clearbit.com/dominos.com",
+  "papa john's": "https://logo.clearbit.com/papajohns.com",
+  "little caesars": "https://logo.clearbit.com/littlecaesars.com",
+  "arby's": "https://logo.clearbit.com/arbys.com",
+  "sonic": "https://logo.clearbit.com/sonicdrivein.com",
+  "chick-fil-a": "https://logo.clearbit.com/chick-fil-a.com",
+  "popeyes": "https://logo.clearbit.com/popeyes.com",
+  "chipotle": "https://logo.clearbit.com/chipotle.com",
+  "five guys": "https://logo.clearbit.com/fiveguys.com",
+  "jimmy john's": "https://logo.clearbit.com/jimmyjohns.com",
+  "panda express": "https://logo.clearbit.com/pandaexpress.com",
   
   // Coffee Chains
-  "starbucks": "https://upload.wikimedia.org/wikipedia/en/thumb/d/d3/Starbucks_Corporation_Logo_2011.svg/200px-Starbucks_Corporation_Logo_2011.svg.png",
-  "dunkin": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/Dunkin%27_logo.svg/200px-Dunkin%27_logo.svg.png",
-  "dunkin donuts": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/Dunkin%27_logo.svg/200px-Dunkin%27_logo.svg.png",
-  "tim hortons": "https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/Tim_Hortons_logo.svg/200px-Tim_Hortons_logo.svg.png",
-  "caribou coffee": "https://upload.wikimedia.org/wikipedia/en/thumb/0/0e/Caribou_Coffee_Logo.svg/200px-Caribou_Coffee_Logo.svg.png",
+  "starbucks": "https://logo.clearbit.com/starbucks.com",
+  "dunkin": "https://logo.clearbit.com/dunkindonuts.com",
+  "dunkin donuts": "https://logo.clearbit.com/dunkindonuts.com",
+  "tim hortons": "https://logo.clearbit.com/timhortons.com",
+  "caribou coffee": "https://logo.clearbit.com/cariboucoffee.com",
   
   // Casual Dining
-  "applebee's": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Applebee%27s_logo.svg/200px-Applebee%27s_logo.svg.png",
-  "chili's": "https://upload.wikimedia.org/wikipedia/en/thumb/1/10/Chili%27s_Grill_%26_Bar_logo.svg/200px-Chili%27s_Grill_%26_Bar_logo.svg.png",
-  "olive garden": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Olive_Garden_Logo.svg/200px-Olive_Garden_Logo.svg.png",
-  "red lobster": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Red_Lobster_logo.svg/200px-Red_Lobster_logo.svg.png",
-  "outback steakhouse": "https://upload.wikimedia.org/wikipedia/en/thumb/a/a8/Outback_Steakhouse_logo.svg/200px-Outback_Steakhouse_logo.svg.png",
-  "texas roadhouse": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Texas_Roadhouse_logo.svg/200px-Texas_Roadhouse_logo.svg.png",
-  "buffalo wild wings": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Buffalo_Wild_Wings_logo.svg/200px-Buffalo_Wild_Wings_logo.svg.png",
-  "denny's": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Denny%27s_Logo_%28Red-Yellow%29.svg/200px-Denny%27s_Logo_%28Red-Yellow%29.svg.png",
-  "ihop": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/IHOP_logo.svg/200px-IHOP_logo.svg.png",
-  "panera bread": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Panera_Bread_logo.svg/200px-Panera_Bread_logo.svg.png",
+  "applebee's": "https://logo.clearbit.com/applebees.com",
+  "chili's": "https://logo.clearbit.com/chilis.com",
+  "olive garden": "https://logo.clearbit.com/olivegarden.com",
+  "red lobster": "https://logo.clearbit.com/redlobster.com",
+  "outback steakhouse": "https://logo.clearbit.com/outback.com",
+  "texas roadhouse": "https://logo.clearbit.com/texasroadhouse.com",
+  "buffalo wild wings": "https://logo.clearbit.com/buffalowildwings.com",
+  "denny's": "https://logo.clearbit.com/dennys.com",
+  "ihop": "https://logo.clearbit.com/ihop.com",
+  "panera bread": "https://logo.clearbit.com/panerabread.com",
   
   // Ice Cream / Dessert
-  "dairy queen": "https://upload.wikimedia.org/wikipedia/en/thumb/9/91/Dairy_Queen_logo.svg/200px-Dairy_Queen_logo.svg.png",
-  "baskin robbins": "https://upload.wikimedia.org/wikipedia/en/thumb/3/38/Baskin-Robbins_logo.svg/200px-Baskin-Robbins_logo.svg.png",
-  "cold stone": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Cold_Stone_Creamery_logo.svg/200px-Cold_Stone_Creamery_logo.svg.png",
-  "ben & jerry's": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Ben_%26_Jerry%27s_logo.svg/200px-Ben_%26_Jerry%27s_logo.svg.png",
+  "dairy queen": "https://logo.clearbit.com/dairyqueen.com",
+  "baskin robbins": "https://logo.clearbit.com/baskinrobbins.com",
+  "cold stone": "https://logo.clearbit.com/coldstonecreamery.com",
+  "ben & jerry's": "https://logo.clearbit.com/benjerry.com",
 };
 
-// Check if a restaurant name matches a known chain
-export function getChainLogo(restaurantName) {
+// Fetch logo and convert to base64 data URL
+async function fetchLogoAsBase64(logoUrl) {
+  try {
+    const response = await fetch(logoUrl);
+    if (!response.ok) return null;
+    
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.warn(`Failed to fetch chain logo from ${logoUrl}:`, error);
+    return null;
+  }
+}
+
+// Check if a restaurant name matches a known chain and fetch logo
+export async function getChainLogo(restaurantName) {
   if (!restaurantName) return null;
   
   const nameLower = restaurantName.toLowerCase().trim();
   
   // Direct match
   if (CHAIN_LOGOS[nameLower]) {
-    return CHAIN_LOGOS[nameLower];
+    return await fetchLogoAsBase64(CHAIN_LOGOS[nameLower]);
   }
   
   // Check if the name contains a chain name
   for (const [chainName, logoUrl] of Object.entries(CHAIN_LOGOS)) {
     if (nameLower.includes(chainName)) {
-      return logoUrl;
+      return await fetchLogoAsBase64(logoUrl);
     }
   }
   

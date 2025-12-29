@@ -253,11 +253,11 @@ async function searchGooglePlace(name, lat, lon) {
       }
     }
     
-    // Check for chain logo first (instant, no API call needed)
-    let photoDataUrl = getChainLogo(name);
+    // Check for chain logo first (instant logo fetch, converted to base64)
+    let photoDataUrl = await getChainLogo(name);
     
     if (photoDataUrl) {
-      console.log(`✓ Using chain logo for: ${name} → ${photoDataUrl.substring(0, 50)}...`);
+      console.log(`✓ Using chain logo for: ${name}`);
     } else if (place.photos && place.photos.length > 0) {
       // Fall back to Google photo for non-chain restaurants
       if (!hasReachedApiLimit()) {
