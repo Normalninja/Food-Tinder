@@ -717,6 +717,10 @@ function App() {
   };
 
   const handleCardClick = async (placeId) => {
+    // This feature requires a backend server - currently disabled
+    console.log('Place details for:', placeId);
+    // TODO: Implement place details view using Google Places API directly
+    /*
     try {
       const response = await axios.get(`http://localhost:8080/getPlaceDetails`, {
         params: { place_id: placeId }
@@ -725,6 +729,7 @@ function App() {
     } catch (error) {
       console.error('Error fetching place details:', error);
     }
+    */
   };
 
   const handleRestartSession = async () => {

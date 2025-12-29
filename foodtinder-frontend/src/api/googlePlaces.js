@@ -230,14 +230,11 @@ async function searchGooglePlace(name, lat, lon) {
     }
     
     // Fetch and cache photo as base64 if available
-    // Prefer photos at index 1-3 (often better than the first) if available
     let photoDataUrl = null;
     if (place.photos && place.photos.length > 0) {
       // Check limit again before photo fetch
       if (!hasReachedApiLimit()) {
-        // Try to get a better photo: use photo at index 1 or 2 if available, otherwise use first
-        const photoIndex = place.photos.length > 2 ? 1 : 0;
-        const photoName = place.photos[photoIndex].name;
+        const photoName = place.photos[0].name;
         photoDataUrl = await fetchPhotoAsBase64(photoName);
         // Increment for photo request
         if (photoDataUrl) {
