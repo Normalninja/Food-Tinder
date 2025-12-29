@@ -3,6 +3,7 @@ import { db } from '../session';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 const PLACES_COLLECTION = 'places';
+const CACHE_VERSION = 2; // Increment this to invalidate all Firebase cache entries
 
 // Generate a unique key for a place based on name and location
 export function makePlaceKey(name, lat, lon) {
@@ -20,6 +21,13 @@ export async function getPlaceFromDB(name, lat, lon) {
     
     if (placeDoc.exists()) {
       const data = placeDoc.data();
+      
+      // Check cache version - invalidate if versions don't match
+      if (data.version !== CACHE_VERSION) {
+        console.log(`Firebase cache version mismatch for: ${name}, will refresh`);
+        return null;
+      }
+      
       // Check if data is still fresh (30 days)
       const age = Date.now() - (data.lastUpdated?.toMillis() || 0);
       const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -45,7 +53,8 @@ export async function savePlaceToDB(name, lat, lon, placeData) {
     
     await setDoc(doc(db, PLACES_COLLECTION, placeKey), {
       ...placeData,
-      lastUpdated: Timestamp.now()
+      lastUpdated: Timestamp.now(),
+      version: CACHE_VERSION
     });
     
     console.log(`Saved place to Firebase: ${name}`);

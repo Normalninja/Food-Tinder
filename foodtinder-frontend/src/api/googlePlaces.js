@@ -4,6 +4,7 @@ import { getPlaceFromDB, savePlaceToDB } from './placesDB';
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
 const CACHE_DURATION_DAYS = 30; // Cache Google data for 30 days
 const MONTHLY_API_CALL_LIMIT = 5000; // Conservative limit to stay within free tier ($200/month credit)
+const CACHE_VERSION = 2; // Increment this to invalidate all old cache entries
 
 // Utility to clear all Google Places cache (useful after algorithm changes)
 export function clearAllGoogleCache() {
@@ -94,6 +95,11 @@ function makePlaceCacheKey(name, lat, lon) {
 // Check if cached data is still valid
 function isCacheValid(cachedData) {
   if (!cachedData || !cachedData.lastUpdated) return false;
+  // Check cache version - invalidate if versions don't match
+  if (cachedData.version !== CACHE_VERSION) {
+    console.log('Cache version mismatch, invalidating cached data');
+    return false;
+  }
   const cacheAge = Date.now() - cachedData.lastUpdated;
   const maxAge = CACHE_DURATION_DAYS * 24 * 60 * 60 * 1000;
   return cacheAge < maxAge;
@@ -119,7 +125,8 @@ function setCachedPlace(name, lat, lon, data) {
   const key = makePlaceCacheKey(name, lat, lon);
   const cacheData = {
     ...data,
-    lastUpdated: Date.now()
+    lastUpdated: Date.now(),
+    version: CACHE_VERSION
   };
   localStorage.setItem(key, JSON.stringify(cacheData));
 }
@@ -222,24 +229,10 @@ async function searchGooglePlace(name, lat, lon) {
       }
     }
     
-    // Fetch and cache photo as base64 if available
-    // Prefer photos at index 1-3 (often better than the first) if available
+    // Google Photos are unreliable (often show wrong images), so we disable them
+    // OSM images are more accurate for our use case
     let photoDataUrl = null;
-    if (place.photos && place.photos.length > 0) {
-      // Check limit again before photo fetch
-      if (!hasReachedApiLimit()) {
-        // Try to get a better photo: use photo at index 1 or 2 if available, otherwise use first
-        const photoIndex = place.photos.length > 2 ? 1 : 0;
-        const photoName = place.photos[photoIndex].name;
-        photoDataUrl = await fetchPhotoAsBase64(photoName);
-        // Increment for photo request
-        if (photoDataUrl) {
-          incrementApiUsage();
-        }
-      } else {
-        console.log('API limit reached, skipping photo fetch');
-      }
-    }
+    console.log('Skipping Google Photos (unreliable), using OSM image_url instead');
     
     // Convert price level string to number (0-4)
     let priceLevel = null;
