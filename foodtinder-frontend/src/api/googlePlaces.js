@@ -158,14 +158,14 @@ async function searchGooglePlace(name, lat, lon) {
         'X-Goog-FieldMask': 'places.id,places.displayName,places.priceLevel,places.rating,places.userRatingCount,places.photos,places.location'
       },
       body: JSON.stringify({
-        textQuery: `${name} restaurant`,
+        textQuery: name,
         locationBias: {
           circle: {
             center: {
               latitude: lat,
               longitude: lon
             },
-            radius: 100.0
+            radius: 50.0
           }
         },
         maxResultCount: 1
@@ -181,24 +181,27 @@ async function searchGooglePlace(name, lat, lon) {
     
     const place = searchData.places[0];
     
-    // Verify the place is actually close to our coordinates (within ~200m)
+    // Verify the place is actually close to our coordinates (within ~100m for better accuracy)
     if (place.location) {
       const distance = calculateDistance(
         lat, lon,
         place.location.latitude, place.location.longitude
       );
-      if (distance > 0.2) { // More than 200 meters away
+      if (distance > 0.1) { // More than 100 meters away
         console.log(`Google Places result too far (${distance.toFixed(2)}km) for: ${name}`);
         return null;
       }
     }
     
     // Fetch and cache photo as base64 if available
+    // Prefer photos at index 1-3 (often better than the first) if available
     let photoDataUrl = null;
     if (place.photos && place.photos.length > 0) {
       // Check limit again before photo fetch
       if (!hasReachedApiLimit()) {
-        const photoName = place.photos[0].name;
+        // Try to get a better photo: use photo at index 1 or 2 if available, otherwise use first
+        const photoIndex = place.photos.length > 2 ? 1 : 0;
+        const photoName = place.photos[photoIndex].name;
         photoDataUrl = await fetchPhotoAsBase64(photoName);
         // Increment for photo request
         if (photoDataUrl) {
