@@ -5,6 +5,21 @@ const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
 const CACHE_DURATION_DAYS = 30; // Cache Google data for 30 days
 const MONTHLY_API_CALL_LIMIT = 5000; // Conservative limit to stay within free tier ($200/month credit)
 
+// Utility to clear all Google Places cache (useful after algorithm changes)
+export function clearAllGoogleCache() {
+  let cleared = 0;
+  const keys = Object.keys(localStorage);
+  for (const key of keys) {
+    if (key.startsWith('google_place_')) {
+      localStorage.removeItem(key);
+      cleared++;
+    }
+  }
+  console.log(`Cleared ${cleared} cached Google Places entries from localStorage`);
+  console.log('Note: Firebase cache needs to be cleared manually from Firebase Console');
+  return cleared;
+}
+
 // Calculate distance between two coordinates in kilometers (Haversine formula)
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // Earth's radius in km
