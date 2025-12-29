@@ -120,15 +120,38 @@ function getCachedPlace(name, lat, lon) {
   }
 }
 
-// Store place data in cache
+// Store place data in cache (excluding photos to save localStorage quota)
 function setCachedPlace(name, lat, lon, data) {
   const key = makePlaceCacheKey(name, lat, lon);
+  // Remove photoUrl before storing in localStorage to avoid quota issues
+  const { photoUrl, ...dataWithoutPhoto } = data;
   const cacheData = {
-    ...data,
+    ...dataWithoutPhoto,
     lastUpdated: Date.now(),
     version: CACHE_VERSION
   };
-  localStorage.setItem(key, JSON.stringify(cacheData));
+  try {
+    localStorage.setItem(key, JSON.stringify(cacheData));
+  } catch (e) {
+    if (e.name === 'QuotaExceededError') {
+      console.warn('localStorage quota exceeded, clearing old Google Places cache');
+      // Clear all old Google Places cache entries
+      const keys = Object.keys(localStorage);
+      for (const k of keys) {
+        if (k.startsWith('google_place_')) {
+          localStorage.removeItem(k);
+        }
+      }
+      // Try again
+      try {
+        localStorage.setItem(key, JSON.stringify(cacheData));
+      } catch (e2) {
+        console.error('Still cannot store in localStorage after clearing:', e2);
+      }
+    } else {
+      console.error('Error storing place in localStorage:', e);
+    }
+  }
 }
 
 // Fetch photo from Google and convert to base64 data URL for caching
@@ -294,18 +317,18 @@ export async function enrichPlaceWithGoogle(place) {
     };
   }
 
-  // Check localStorage cache (browser-specific cache)
+  // Check localStorage cache (browser-specific cache, no photos stored)
   const cached = getCachedPlace(place.name, place.lat, place.lon);
   if (cached) {
-    console.log(`Using localStorage cached data for: ${place.name}`);
-    // Also save to Firebase for persistence across sessions
-    await savePlaceToDB(place.name, place.lat, place.lon, cached);
+    console.log(`Using localStorage cached data for: ${place.name} (checking Firebase for photo)`);
+    // Get full data with photo from Firebase
+    const firebaseData = await getPlaceFromDB(place.name, place.lat, place.lon);
     
     return {
       ...place,
       priceLevel: cached.priceLevel !== null ? cached.priceLevel : place.priceRange,
       rating: cached.rating !== null ? cached.rating : place.stars,
-      image_url: cached.photoUrl || place.image_url,
+      image_url: (firebaseData?.photoUrl) || place.image_url,
       userRatingsTotal: cached.userRatingsTotal,
       googleEnriched: true
     };
