@@ -268,15 +268,16 @@ async function searchGooglePlace(name, lat, lon) {
       }
     }
     
-    // Convert price level string to number (0-4)
+    // Convert price level string to number (1-5 scale)
+    // Google uses 0-4 (FREE-VERY_EXPENSIVE), we map to 1-5 ($-$$$$$)
     let priceLevel = null;
     if (place.priceLevel) {
       const priceLevelMap = {
-        'PRICE_LEVEL_FREE': 0,
-        'PRICE_LEVEL_INEXPENSIVE': 1,
-        'PRICE_LEVEL_MODERATE': 2,
-        'PRICE_LEVEL_EXPENSIVE': 3,
-        'PRICE_LEVEL_VERY_EXPENSIVE': 4
+        'PRICE_LEVEL_FREE': 1,           // $ (Free → $)
+        'PRICE_LEVEL_INEXPENSIVE': 2,    // $$
+        'PRICE_LEVEL_MODERATE': 3,       // $$$
+        'PRICE_LEVEL_EXPENSIVE': 4,      // $$$$
+        'PRICE_LEVEL_VERY_EXPENSIVE': 5  // $$$$$
       };
       priceLevel = priceLevelMap[place.priceLevel] !== undefined ? priceLevelMap[place.priceLevel] : null;
     }

@@ -50,7 +50,7 @@ function App() {
   const [unfilteredPlaces, setUnfilteredPlaces] = useState([]); // All places before cuisine filter
   const [availableCuisines, setAvailableCuisines] = useState([]); // Unique cuisines from search
   const [selectedCuisines, setSelectedCuisines] = useState([]); // User-selected cuisines to include
-  const [selectedPriceLevels, setSelectedPriceLevels] = useState([0, 1, 2, 3, 4]); // Price levels to include (0-4)
+  const [selectedPriceLevels, setSelectedPriceLevels] = useState([1, 2, 3, 4, 5]); // Price levels to include (1-5)
   const [minRating, setMinRating] = useState(0); // Minimum rating filter (0-5)
   const [swipeOffset, setSwipeOffset] = useState(0); // X offset for swipe animation
   const [isSwipeActive, setIsSwipeActive] = useState(false); // Track if user is actively swiping
@@ -1039,7 +1039,7 @@ function App() {
   };
 
   const selectAllPriceLevels = () => {
-    setSelectedPriceLevels([0, 1, 2, 3, 4]);
+    setSelectedPriceLevels([1, 2, 3, 4, 5]);
   };
 
   // Swipe gesture handlers
@@ -1273,7 +1273,7 @@ function App() {
               </button>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {[0, 1, 2, 3, 4].map(level => (
+              {[1, 2, 3, 4, 5].map(level => (
                 <label key={level} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, background: selectedPriceLevels.includes(level) ? '#4A90E2' : '#fff', color: selectedPriceLevels.includes(level) ? '#fff' : '#000', borderRadius: 6, cursor: 'pointer', border: '2px solid #4A90E2', minWidth: 80, justifyContent: 'center' }}>
                   <input
                     type="checkbox"
@@ -1282,7 +1282,7 @@ function App() {
                     style={{ width: 18, height: 18, cursor: 'pointer' }}
                   />
                   <span style={{ fontSize: 18, fontWeight: 'bold' }}>
-                    {level === 0 ? 'Free' : '$'.repeat(level)}
+                    {'$'.repeat(level)}
                   </span>
                 </label>
               ))}
