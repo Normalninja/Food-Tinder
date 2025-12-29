@@ -292,7 +292,6 @@ export async function enrichPlaceWithGoogle(place) {
       userRatingsTotal: googleData.userRatingsTotal,
       googlePlaceId: googleData.googlePlaceId,
       googleEnriched: true
-      googleEnriched: true
     };
   }
 
