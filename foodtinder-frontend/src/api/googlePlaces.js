@@ -5,7 +5,7 @@ import { getChainLogo } from './chainLogos';
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
 const CACHE_DURATION_DAYS = 30; // Cache Google data for 30 days
 const MONTHLY_API_CALL_LIMIT = 5000; // Conservative limit to stay within free tier ($200/month credit)
-const CACHE_VERSION = 3; // Increment this to invalidate all old cache entries
+const CACHE_VERSION = 4; // Increment this to invalidate all old cache entries
 
 // Utility to clear all Google Places cache (useful after algorithm changes)
 export function clearAllGoogleCache() {

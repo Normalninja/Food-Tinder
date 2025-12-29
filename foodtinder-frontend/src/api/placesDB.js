@@ -3,7 +3,7 @@ import { db } from '../session';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 const PLACES_COLLECTION = 'places';
-const CACHE_VERSION = 3; // Increment this to invalidate all Firebase cache entries
+const CACHE_VERSION = 4; // Increment this to invalidate all Firebase cache entries
 
 // Generate a unique key for a place based on name and location
 export function makePlaceKey(name, lat, lon) {
