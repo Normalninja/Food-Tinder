@@ -24,6 +24,9 @@ if (firebaseConfig) {
   db = getFirestore(app);
 }
 
+// Export db for use in other modules
+export { db };
+
 // LocalStorage fallback for sessions when Firebase isn't configured
 const STORAGE_KEY_PREFIX = 'foodtinder:session:';
 
