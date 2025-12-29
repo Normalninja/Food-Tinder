@@ -15,6 +15,11 @@ export function makePlaceKey(name, lat, lon) {
 
 // Get place from Firebase
 export async function getPlaceFromDB(name, lat, lon) {
+  if (!db) {
+    console.warn('Firebase not initialized, skipping places DB fetch');
+    return null;
+  }
+  
   try {
     const placeKey = makePlaceKey(name, lat, lon);
     const placeDoc = await getDoc(doc(db, PLACES_COLLECTION, placeKey));
@@ -48,6 +53,11 @@ export async function getPlaceFromDB(name, lat, lon) {
 
 // Save place to Firebase
 export async function savePlaceToDB(name, lat, lon, placeData) {
+  if (!db) {
+    console.warn('Firebase not initialized, skipping places DB save');
+    return;
+  }
+  
   try {
     const placeKey = makePlaceKey(name, lat, lon);
     
@@ -57,7 +67,7 @@ export async function savePlaceToDB(name, lat, lon, placeData) {
       version: CACHE_VERSION
     });
     
-    console.log(`Saved place to Firebase: ${name}`);
+    console.log(`Saved place to Firebase places collection: ${name}`);
   } catch (error) {
     console.error('Error saving place to Firebase:', error);
   }
