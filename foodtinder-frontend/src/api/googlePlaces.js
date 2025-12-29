@@ -193,13 +193,6 @@ async function searchGooglePlace(name, lat, lon) {
       }
     }
     
-    if (!searchData.places || searchData.places.length === 0) {
-      console.log(`No Google Places result for: ${name}`);
-      return null;
-    }
-    
-    const place = searchData.places[0];
-    
     // Fetch and cache photo as base64 if available
     let photoDataUrl = null;
     if (place.photos && place.photos.length > 0) {
@@ -299,8 +292,7 @@ export async function enrichPlaceWithGoogle(place) {
       userRatingsTotal: googleData.userRatingsTotal,
       googlePlaceId: googleData.googlePlaceId,
       googleEnriched: true
-    };
-  }
+      googleEnriched: true
     };
   }
 
