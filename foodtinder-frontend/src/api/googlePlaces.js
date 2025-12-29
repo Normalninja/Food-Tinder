@@ -1,5 +1,6 @@
 // Google Places API integration with localStorage caching
 import { getPlaceFromDB, savePlaceToDB } from './placesDB';
+import { getChainLogo } from './chainLogos';
 
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
 const CACHE_DURATION_DAYS = 30; // Cache Google data for 30 days
@@ -252,10 +253,13 @@ async function searchGooglePlace(name, lat, lon) {
       }
     }
     
-    // Fetch and cache photo as base64 if available
-    let photoDataUrl = null;
-    if (place.photos && place.photos.length > 0) {
-      // Check limit again before photo fetch
+    // Check for chain logo first (instant, no API call needed)
+    let photoDataUrl = getChainLogo(name);
+    
+    if (photoDataUrl) {
+      console.log(`Using chain logo for: ${name}`);
+    } else if (place.photos && place.photos.length > 0) {
+      // Fall back to Google photo for non-chain restaurants
       if (!hasReachedApiLimit()) {
         const photoName = place.photos[0].name;
         photoDataUrl = await fetchPhotoAsBase64(photoName);
