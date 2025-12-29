@@ -385,7 +385,7 @@ function App() {
       // Fetch places directly from Overpass; pass progress callback during augmentation
       const fetched = await fetchPlacesOSM(latitude, longitude, distanceInMeters, {
         augment: true,
-        skipCache: true,
+        skipCache: false,
         onProgress: (current, total) => {
           try { setProgress(Math.round((current / Math.max(1, total)) * 100)); } catch (e) {}
         }
