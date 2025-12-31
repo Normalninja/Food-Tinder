@@ -1632,7 +1632,16 @@ function App() {
               <img 
                 src={places[simulationMode ? userIndexes[activeUser] : currentIndex].image_url || 'https://via.placeholder.com/400x300/cccccc/666666?text=No+Image'} 
                 alt={places[simulationMode ? userIndexes[activeUser] : currentIndex].name} 
-                style={{ maxWidth: '100%', height: 'auto', borderRadius: 6 }} 
+                style={{ maxWidth: '100%', height: 'auto', borderRadius: 6 }}
+                onError={(e) => {
+                  const currentPlace = places[simulationMode ? userIndexes[activeUser] : currentIndex];
+                  // If chain logo fails, try Google Photo backup, then placeholder
+                  if (currentPlace.googlePhotoUrl && e.target.src !== currentPlace.googlePhotoUrl) {
+                    e.target.src = currentPlace.googlePhotoUrl;
+                  } else if (e.target.src !== 'https://via.placeholder.com/400x300/cccccc/666666?text=No+Image') {
+                    e.target.src = 'https://via.placeholder.com/400x300/cccccc/666666?text=No+Image';
+                  }
+                }}
               />
             </div>
             <div style={{ marginTop: 12, padding: '12px', background: '#f8f9fa', borderRadius: 6 }}>

@@ -254,11 +254,10 @@ async function searchGooglePlace(name, lat, lon) {
     }
     
     // Check for chain logo first (returns URL directly, no fetch needed)
-    let photoDataUrl = getChainLogo(name);
+    const chainLogo = getChainLogo(name);
+    let photoDataUrl = null;
     
-    if (photoDataUrl) {
-      console.log(`✓ Using chain logo for: ${name}`);
-    } else if (place.photos && place.photos.length > 0) {
+    if (place.photos && place.photos.length > 0) {
       // Fall back to Google photo for non-chain restaurants
       if (!hasReachedApiLimit()) {
         const photoName = place.photos[0].name;
@@ -293,7 +292,8 @@ async function searchGooglePlace(name, lat, lon) {
       googlePlaceId: place.id,
       priceLevel: priceLevel,
       rating: place.rating || null,
-      photoUrl: photoDataUrl,
+      photoUrl: chainLogo || photoDataUrl,  // Prefer chain logo, fallback to Google Photo
+      googlePhotoUrl: photoDataUrl,  // Keep Google Photo as backup for fallback
       userRatingsTotal: place.userRatingCount || null
     };
   } catch (error) {
