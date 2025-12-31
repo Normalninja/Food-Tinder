@@ -1,69 +1,123 @@
-// Chain restaurant logos
-// Maps restaurant names to their logo URLs
-// Uses logo.dev free tier for reliable company logos
+// Chain restaurant logos using logo.dev API
+// Free tier: 500k requests/month, we limit to 50k for safety
 
-const CHAIN_LOGOS = {
+const LOGO_DEV_API_KEY = import.meta.env.VITE_LOGO_DEV_API_KEY;
+const MONTHLY_LOGO_API_LIMIT = 50000;
+
+// Logo API usage tracking
+function getLogoApiUsageData() {
+  const data = localStorage.getItem('logo_api_usage');
+  if (!data) {
+    return { month: new Date().getMonth(), year: new Date().getFullYear(), count: 0 };
+  }
+  try {
+    return JSON.parse(data);
+  } catch (e) {
+    return { month: new Date().getMonth(), year: new Date().getFullYear(), count: 0 };
+  }
+}
+
+function incrementLogoApiUsage() {
+  const usage = getLogoApiUsageData();
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  // Reset counter if new month
+  if (usage.month !== currentMonth || usage.year !== currentYear) {
+    usage.month = currentMonth;
+    usage.year = currentYear;
+    usage.count = 1;
+  } else {
+    usage.count++;
+  }
+  
+  localStorage.setItem('logo_api_usage', JSON.stringify(usage));
+  return usage.count;
+}
+
+function hasReachedLogoApiLimit() {
+  const usage = getLogoApiUsageData();
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  // Reset if new month
+  if (usage.month !== currentMonth || usage.year !== currentYear) {
+    return false;
+  }
+  
+  return usage.count >= MONTHLY_LOGO_API_LIMIT;
+}
+
+const CHAIN_DOMAINS = {
   // Fast Food Chains
-  "mcdonald's": "https://img.logo.dev/mcdonalds.com",
-  "burger king": "https://img.logo.dev/bk.com",
-  "wendy's": "https://img.logo.dev/wendys.com",
-  "taco bell": "https://img.logo.dev/tacobell.com",
-  "kfc": "https://img.logo.dev/kfc.com",
-  "subway": "https://img.logo.dev/subway.com",
-  "pizza hut": "https://img.logo.dev/pizzahut.com",
-  "domino's": "https://img.logo.dev/dominos.com",
-  "papa john's": "https://img.logo.dev/papajohns.com",
-  "little caesars": "https://img.logo.dev/littlecaesars.com",
-  "arby's": "https://img.logo.dev/arbys.com",
-  "sonic": "https://img.logo.dev/sonicdrivein.com",
-  "chick-fil-a": "https://img.logo.dev/chick-fil-a.com",
-  "popeyes": "https://img.logo.dev/popeyes.com",
-  "chipotle": "https://img.logo.dev/chipotle.com",
-  "five guys": "https://img.logo.dev/fiveguys.com",
-  "jimmy john's": "https://img.logo.dev/jimmyjohns.com",
-  "panda express": "https://img.logo.dev/pandaexpress.com",
+  "mcdonald's": "mcdonalds.com",
+  "burger king": "bk.com",
+  "wendy's": "wendys.com",
+  "taco bell": "tacobell.com",
+  "kfc": "kfc.com",
+  "subway": "subway.com",
+  "pizza hut": "pizzahut.com",
+  "domino's": "dominos.com",
+  "papa john's": "papajohns.com",
+  "little caesars": "littlecaesars.com",
+  "arby's": "arbys.com",
+  "sonic": "sonicdrivein.com",
+  "chick-fil-a": "chick-fil-a.com",
+  "popeyes": "popeyes.com",
+  "chipotle": "chipotle.com",
+  "five guys": "fiveguys.com",
+  "jimmy john's": "jimmyjohns.com",
+  "panda express": "pandaexpress.com",
   
   // Coffee Chains
-  "starbucks": "https://img.logo.dev/starbucks.com",
-  "dunkin": "https://img.logo.dev/dunkindonuts.com",
-  "dunkin donuts": "https://img.logo.dev/dunkindonuts.com",
-  "tim hortons": "https://img.logo.dev/timhortons.com",
-  "caribou coffee": "https://img.logo.dev/cariboucoffee.com",
+  "starbucks": "starbucks.com",
+  "dunkin": "dunkindonuts.com",
+  "dunkin donuts": "dunkindonuts.com",
+  "tim hortons": "timhortons.com",
+  "caribou coffee": "cariboucoffee.com",
   
   // Casual Dining
-  "applebee's": "https://img.logo.dev/applebees.com",
-  "chili's": "https://img.logo.dev/chilis.com",
-  "olive garden": "https://img.logo.dev/olivegarden.com",
-  "red lobster": "https://img.logo.dev/redlobster.com",
-  "outback steakhouse": "https://img.logo.dev/outback.com",
-  "texas roadhouse": "https://img.logo.dev/texasroadhouse.com",
-  "buffalo wild wings": "https://img.logo.dev/buffalowildwings.com",
-  "denny's": "https://img.logo.dev/dennys.com",
-  "ihop": "https://img.logo.dev/ihop.com",
-  "panera bread": "https://img.logo.dev/panerabread.com",
+  "applebee's": "applebees.com",
+  "chili's": "chilis.com",
+  "olive garden": "olivegarden.com",
+  "red lobster": "redlobster.com",
+  "outback steakhouse": "outback.com",
+  "texas roadhouse": "texasroadhouse.com",
+  "buffalo wild wings": "buffalowildwings.com",
+  "denny's": "dennys.com",
+  "ihop": "ihop.com",
+  "panera bread": "panerabread.com",
   
   // Ice Cream / Dessert
-  "dairy queen": "https://img.logo.dev/dairyqueen.com",
-  "baskin robbins": "https://img.logo.dev/baskinrobbins.com",
-  "cold stone": "https://img.logo.dev/coldstonecreamery.com",
-  "ben & jerry's": "https://img.logo.dev/benjerry.com",
+  "dairy queen": "dairyqueen.com",
+  "baskin robbins": "baskinrobbins.com",
+  "cold stone": "coldstonecreamery.com",
+  "ben & jerry's": "benjerry.com",
 };
 
 // Check if a restaurant name matches a known chain and return logo URL
 export function getChainLogo(restaurantName) {
-  if (!restaurantName) return null;
+  if (!restaurantName || !LOGO_DEV_API_KEY) return null;
+  
+  // Check if we've reached the monthly limit
+  if (hasReachedLogoApiLimit()) {
+    console.log('Logo API monthly limit reached');
+    return null;
+  }
   
   const nameLower = restaurantName.toLowerCase().trim();
   
   // Direct match
-  if (CHAIN_LOGOS[nameLower]) {
-    return CHAIN_LOGOS[nameLower];
+  if (CHAIN_DOMAINS[nameLower]) {
+    incrementLogoApiUsage();
+    return `https://img.logo.dev/${CHAIN_DOMAINS[nameLower]}?token=${LOGO_DEV_API_KEY}`;
   }
   
   // Check if the name contains a chain name
-  for (const [chainName, logoUrl] of Object.entries(CHAIN_LOGOS)) {
+  for (const [chainName, domain] of Object.entries(CHAIN_DOMAINS)) {
     if (nameLower.includes(chainName)) {
-      return logoUrl;
+      incrementLogoApiUsage();
+      return `https://img.logo.dev/${domain}?token=${LOGO_DEV_API_KEY}`;
     }
   }
   
