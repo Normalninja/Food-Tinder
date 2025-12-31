@@ -267,8 +267,14 @@ function App() {
       
       console.log('Setting places for joined session:', session.places.length);
       
+      // Enrich places with photos (chain logos are URLs, Google photos need fetching)
+      // Import enrichPlacesWithGoogle at the top if needed
+      const { enrichPlacesWithGoogle } = await import('./api/googlePlaces');
+      const enrichedPlaces = await enrichPlacesWithGoogle(session.places);
+      console.log('Enriched places with photos for client');
+      
       // Set places FIRST before clearing other state
-      setPlaces(session.places);
+      setPlaces(enrichedPlaces);
       
       // Find first place this user hasn't reviewed (voted or disliked)
       const userReviewedPlaces = new Set();
@@ -1358,6 +1364,17 @@ function App() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
             <h2 style={{ margin: 0 }}>Swipe on Places</h2>
             <div style={{ display: 'flex', gap: '10px' }}>
+              {isSessionCreator && (
+                <button 
+                  onClick={() => {
+                    setIsUpdatingParameters(true);
+                    setScreen('parameters');
+                  }} 
+                  style={{ padding: '8px 16px', fontSize: 14, background: '#007bff', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+                >
+                  Update Session
+                </button>
+              )}
               <button 
                 onClick={() => setScreen('qrcode')} 
                 style={{ padding: '8px 16px', fontSize: 14, background: '#6c757d', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
