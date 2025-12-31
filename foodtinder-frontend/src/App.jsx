@@ -10,11 +10,16 @@ import { Timestamp } from 'firebase/firestore';
 // Firebase has a 1MB document size limit, base64 photos can be 20-50KB each
 function stripPhotosForFirebase(places) {
   return places.map(place => {
-    const { image_url, photoUrl, ...placeWithoutPhotos } = place;
-    // Only include image_url if it's NOT a base64 data URL (keep regular URLs)
+    const { image_url, photoUrl, googlePhotoUrl, chainLogoUrl, ...placeWithoutPhotos } = place;
+    // Only include URLs if they're NOT base64 data URLs (keep regular URLs)
     if (image_url && !image_url.startsWith('data:')) {
       placeWithoutPhotos.image_url = image_url;
     }
+    // Keep chain logo URL (never base64)
+    if (chainLogoUrl) {
+      placeWithoutPhotos.chainLogoUrl = chainLogoUrl;
+    }
+    // Don't include googlePhotoUrl or photoUrl (they're base64 or redundant)
     return placeWithoutPhotos;
   });
 }
@@ -1067,11 +1072,16 @@ function App() {
       // Strip out large data (base64 photos) before saving to Firebase
       // Keep photos in localStorage only - Firebase has 1MB document limit
       const placesForFirebase = filteredPlaces.map(place => {
-        const { image_url, photoUrl, ...placeWithoutPhotos } = place;
-        // Only include image_url if it's NOT a base64 data URL (keep regular URLs)
+        const { image_url, photoUrl, googlePhotoUrl, chainLogoUrl, ...placeWithoutPhotos } = place;
+        // Only include URLs if they're NOT base64 data URLs (keep regular URLs)
         if (image_url && !image_url.startsWith('data:')) {
           placeWithoutPhotos.image_url = image_url;
         }
+        // Keep chain logo URL (never base64)
+        if (chainLogoUrl) {
+          placeWithoutPhotos.chainLogoUrl = chainLogoUrl;
+        }
+        // Don't include googlePhotoUrl or photoUrl (they're base64 or redundant)
         return placeWithoutPhotos;
       });
       

@@ -124,8 +124,8 @@ function getCachedPlace(name, lat, lon) {
 // Store place data in cache (excluding photos to save localStorage quota)
 function setCachedPlace(name, lat, lon, data) {
   const key = makePlaceCacheKey(name, lat, lon);
-  // Remove photoUrl before storing in localStorage to avoid quota issues
-  const { photoUrl, ...dataWithoutPhoto } = data;
+  // Remove all photo fields before storing in localStorage to avoid quota issues
+  const { photoUrl, googlePhotoUrl, chainLogoUrl, ...dataWithoutPhoto } = data;
   const cacheData = {
     ...dataWithoutPhoto,
     lastUpdated: Date.now(),
@@ -292,8 +292,9 @@ async function searchGooglePlace(name, lat, lon) {
       googlePlaceId: place.id,
       priceLevel: priceLevel,
       rating: place.rating || null,
-      photoUrl: chainLogo || photoDataUrl,  // Prefer chain logo, fallback to Google Photo
-      googlePhotoUrl: photoDataUrl,  // Keep Google Photo as backup for fallback
+      chainLogoUrl: chainLogo,  // Chain logo URL (if matched)
+      googlePhotoUrl: photoDataUrl,  // Google Photo as base64 or null
+      photoUrl: chainLogo || photoDataUrl,  // Preferred photo for display
       userRatingsTotal: place.userRatingCount || null
     };
   } catch (error) {
@@ -304,27 +305,41 @@ async function searchGooglePlace(name, lat, lon) {
 
 // Enrich a single place with Google data
 export async function enrichPlaceWithGoogle(place) {
-  // If place already has an image_url (chain logo or other), just return it
+  // Always check for chain logo first (even if place has image_url)
+  // This allows us to update from base64 Google Photos to chain logos
+  const chainLogo = getChainLogo(place.name);
+  if (chainLogo) {
+    console.log(`Using chain logo for: ${place.name}`);
+    return { 
+      ...place, 
+      image_url: chainLogo,
+      chainLogoUrl: chainLogo,
+      googleEnriched: true 
+    };
+  }
+  
+  // If place already has an image_url (not a chain logo), just return it
   if (place.image_url && !place.image_url.startsWith('data:')) {
-    // Has a URL-based image already (likely chain logo), just mark as enriched
+    // Has a URL-based image already, just mark as enriched
     return { ...place, googleEnriched: true };
   }
   
-  // If place is missing image_url, try to get it (even if already enriched)
+  // If place is missing image_url, try to get it
   // This handles places loaded from Firebase sessions that had base64 photos stripped
   if (!place.image_url) {
-    // First try chain logo
-    const chainLogo = getChainLogo(place.name);
-    if (chainLogo) {
-      console.log(`Adding chain logo to place: ${place.name}`);
-      return { ...place, image_url: chainLogo, googleEnriched: true };
-    }
-    
-    // If not a chain, try to get photo from Firebase cache
+    // Try to get photo from Firebase cache
     const firebaseData = await getPlaceFromDB(place.name, place.lat, place.lon);
-    if (firebaseData && firebaseData.photoUrl) {
-      console.log(`Adding photo from Firebase cache for: ${place.name}`);
-      return { ...place, image_url: firebaseData.photoUrl, googleEnriched: true };
+    if (firebaseData) {
+      const photoUrl = firebaseData.photoUrl || firebaseData.chainLogoUrl || firebaseData.googlePhotoUrl;
+      if (photoUrl) {
+        console.log(`Adding photo from Firebase cache for: ${place.name}`);
+        return { 
+          ...place, 
+          image_url: photoUrl,
+          googlePhotoUrl: firebaseData.googlePhotoUrl,
+          googleEnriched: true 
+        };
+      }
     }
   }
   
@@ -341,7 +356,9 @@ export async function enrichPlaceWithGoogle(place) {
       ...place,
       priceLevel: firebaseData.priceLevel !== null ? firebaseData.priceLevel : place.priceRange,
       rating: firebaseData.rating !== null ? firebaseData.rating : place.stars,
-      image_url: firebaseData.photoUrl || place.image_url,
+      image_url: firebaseData.photoUrl || firebaseData.chainLogoUrl || firebaseData.googlePhotoUrl || place.image_url,
+      chainLogoUrl: firebaseData.chainLogoUrl,
+      googlePhotoUrl: firebaseData.googlePhotoUrl,
       userRatingsTotal: firebaseData.userRatingsTotal,
       googlePlaceId: firebaseData.googlePlaceId,
       googleEnriched: true,
@@ -360,7 +377,9 @@ export async function enrichPlaceWithGoogle(place) {
       ...place,
       priceLevel: cached.priceLevel !== null ? cached.priceLevel : place.priceRange,
       rating: cached.rating !== null ? cached.rating : place.stars,
-      image_url: (firebaseData?.photoUrl) || place.image_url,
+      image_url: (firebaseData?.photoUrl || firebaseData?.chainLogoUrl || firebaseData?.googlePhotoUrl) || place.image_url,
+      chainLogoUrl: firebaseData?.chainLogoUrl,
+      googlePhotoUrl: firebaseData?.googlePhotoUrl,
       userRatingsTotal: cached.userRatingsTotal,
       googleEnriched: true
     };
@@ -380,6 +399,8 @@ export async function enrichPlaceWithGoogle(place) {
       priceLevel: googleData.priceLevel !== null ? googleData.priceLevel : place.priceRange,
       rating: googleData.rating !== null ? googleData.rating : place.stars,
       image_url: googleData.photoUrl || place.image_url,
+      chainLogoUrl: googleData.chainLogoUrl,
+      googlePhotoUrl: googleData.googlePhotoUrl,
       userRatingsTotal: googleData.userRatingsTotal,
       googlePlaceId: googleData.googlePlaceId,
       googleEnriched: true

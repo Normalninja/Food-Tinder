@@ -97,29 +97,46 @@ const CHAIN_DOMAINS = {
 
 // Check if a restaurant name matches a known chain and return logo URL
 export function getChainLogo(restaurantName) {
-  if (!restaurantName || !LOGO_DEV_API_KEY) return null;
+  console.log('[chainLogos] getChainLogo called with:', restaurantName);
+  console.log('[chainLogos] API key present:', !!LOGO_DEV_API_KEY);
+  
+  if (!restaurantName) {
+    console.log('[chainLogos] Missing restaurant name');
+    return null;
+  }
+  
+  if (!LOGO_DEV_API_KEY) {
+    console.log('[chainLogos] Missing API key');
+    return null;
+  }
   
   // Check if we've reached the monthly limit
   if (hasReachedLogoApiLimit()) {
-    console.log('Logo API monthly limit reached');
+    console.log('[chainLogos] Logo API monthly limit reached');
     return null;
   }
   
   const nameLower = restaurantName.toLowerCase().trim();
+  console.log('[chainLogos] Searching for:', nameLower);
   
   // Direct match
   if (CHAIN_DOMAINS[nameLower]) {
     incrementLogoApiUsage();
-    return `https://img.logo.dev/${CHAIN_DOMAINS[nameLower]}?token=${LOGO_DEV_API_KEY}`;
+    const url = `https://img.logo.dev/${CHAIN_DOMAINS[nameLower]}?token=${LOGO_DEV_API_KEY}`;
+    console.log('[chainLogos] Direct match found, returning:', url);
+    return url;
   }
   
   // Check if the name contains a chain name
   for (const [chainName, domain] of Object.entries(CHAIN_DOMAINS)) {
     if (nameLower.includes(chainName)) {
       incrementLogoApiUsage();
-      return `https://img.logo.dev/${domain}?token=${LOGO_DEV_API_KEY}`;
+      const url = `https://img.logo.dev/${domain}?token=${LOGO_DEV_API_KEY}`;
+      console.log('[chainLogos] Partial match found:', chainName, '-> returning:', url);
+      return url;
     }
   }
   
+  console.log('[chainLogos] No match found for:', nameLower);
   return null;
 }
