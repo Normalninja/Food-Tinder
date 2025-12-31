@@ -46,6 +46,8 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
           # Google Places API key
           VITE_GOOGLE_PLACES_API_KEY: ${{ secrets.VITE_GOOGLE_PLACES_API_KEY }}
+          # Logo.dev API key
+          VITE_LOGO_DEV_API_KEY: ${{ secrets.VITE_LOGO_DEV_API_KEY }}
       
       - name: Setup Pages
         uses: actions/configure-pages@v4

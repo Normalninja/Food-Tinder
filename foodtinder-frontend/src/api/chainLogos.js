@@ -4,6 +4,11 @@
 const LOGO_DEV_API_KEY = import.meta.env.VITE_LOGO_DEV_API_KEY;
 const MONTHLY_LOGO_API_LIMIT = 50000;
 
+// Debug: Log the API key status on module load
+console.log('[chainLogos] Module loaded');
+console.log('[chainLogos] VITE_LOGO_DEV_API_KEY exists:', !!LOGO_DEV_API_KEY);
+console.log('[chainLogos] Environment variables:', import.meta.env);
+
 // Logo API usage tracking
 function getLogoApiUsageData() {
   const data = localStorage.getItem('logo_api_usage');
