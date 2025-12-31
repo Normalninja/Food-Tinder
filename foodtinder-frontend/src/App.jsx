@@ -228,7 +228,13 @@ function App() {
             
             if (currentPlaceIds !== newPlaceIds) {
               console.log('Session updated by host, refreshing places');
-              setPlaces(session.places);
+              
+              // Enrich places with photos before setting
+              const { enrichPlacesWithGoogle } = await import('./api/googlePlaces');
+              const enrichedPlaces = await enrichPlacesWithGoogle(session.places);
+              console.log('Enriched updated places with photos for client');
+              
+              setPlaces(enrichedPlaces);
               
               // Find the first place this user hasn't reviewed (voted or disliked) yet
               const userReviewedPlaces = new Set();
