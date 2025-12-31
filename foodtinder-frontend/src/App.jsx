@@ -1630,16 +1630,17 @@ function App() {
             <h2>{places[simulationMode ? userIndexes[activeUser] : currentIndex].name}</h2>
             <div style={{ marginTop: 8 }}>
               <img 
-                src={places[simulationMode ? userIndexes[activeUser] : currentIndex].image_url || 'https://via.placeholder.com/400x300/cccccc/666666?text=No+Image'} 
+                src={places[simulationMode ? userIndexes[activeUser] : currentIndex].image_url || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23cccccc" width="400" height="300"/%3E%3Ctext fill="%23666666" font-family="Arial" font-size="20" text-anchor="middle" x="200" y="150"%3ENo Image%3C/text%3E%3C/svg%3E'} 
                 alt={places[simulationMode ? userIndexes[activeUser] : currentIndex].name} 
                 style={{ maxWidth: '100%', height: 'auto', borderRadius: 6 }}
                 onError={(e) => {
                   const currentPlace = places[simulationMode ? userIndexes[activeUser] : currentIndex];
-                  // If chain logo fails, try Google Photo backup, then placeholder
+                  // If chain logo fails, try Google Photo backup
                   if (currentPlace.googlePhotoUrl && e.target.src !== currentPlace.googlePhotoUrl) {
                     e.target.src = currentPlace.googlePhotoUrl;
-                  } else if (e.target.src !== 'https://via.placeholder.com/400x300/cccccc/666666?text=No+Image') {
-                    e.target.src = 'https://via.placeholder.com/400x300/cccccc/666666?text=No+Image';
+                  } else if (!e.target.src.startsWith('data:image/svg+xml')) {
+                    // Use inline SVG as final fallback (no external service needed)
+                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23cccccc" width="400" height="300"/%3E%3Ctext fill="%23666666" font-family="Arial" font-size="20" text-anchor="middle" x="200" y="150"%3ENo Image%3C/text%3E%3C/svg%3E';
                   }
                 }}
               />
