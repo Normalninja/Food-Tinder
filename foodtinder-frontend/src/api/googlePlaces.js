@@ -304,8 +304,22 @@ async function searchGooglePlace(name, lat, lon) {
 
 // Enrich a single place with Google data
 export async function enrichPlaceWithGoogle(place) {
-  // Check if we already have Google data
+  // If place already has an image_url (chain logo or other), just return it
+  if (place.image_url && !place.image_url.startsWith('data:')) {
+    // Has a URL-based image already (likely chain logo), just mark as enriched
+    return { ...place, googleEnriched: true };
+  }
+  
+  // Check if we already have Google data but might be missing photos
   if (place.googleEnriched || place.firebaseEnriched) {
+    // Try to get chain logo if missing
+    if (!place.image_url) {
+      const chainLogo = getChainLogo(place.name);
+      if (chainLogo) {
+        console.log(`Adding chain logo to already enriched place: ${place.name}`);
+        return { ...place, image_url: chainLogo, googleEnriched: true };
+      }
+    }
     return place;
   }
 
