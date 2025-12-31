@@ -310,16 +310,26 @@ export async function enrichPlaceWithGoogle(place) {
     return { ...place, googleEnriched: true };
   }
   
-  // Check if we already have Google data but might be missing photos
-  if (place.googleEnriched || place.firebaseEnriched) {
-    // Try to get chain logo if missing
-    if (!place.image_url) {
-      const chainLogo = getChainLogo(place.name);
-      if (chainLogo) {
-        console.log(`Adding chain logo to already enriched place: ${place.name}`);
-        return { ...place, image_url: chainLogo, googleEnriched: true };
-      }
+  // If place is missing image_url, try to get it (even if already enriched)
+  // This handles places loaded from Firebase sessions that had base64 photos stripped
+  if (!place.image_url) {
+    // First try chain logo
+    const chainLogo = getChainLogo(place.name);
+    if (chainLogo) {
+      console.log(`Adding chain logo to place: ${place.name}`);
+      return { ...place, image_url: chainLogo, googleEnriched: true };
     }
+    
+    // If not a chain, try to get photo from Firebase cache
+    const firebaseData = await getPlaceFromDB(place.name, place.lat, place.lon);
+    if (firebaseData && firebaseData.photoUrl) {
+      console.log(`Adding photo from Firebase cache for: ${place.name}`);
+      return { ...place, image_url: firebaseData.photoUrl, googleEnriched: true };
+    }
+  }
+  
+  // Check if we already have Google data (has metadata but we handled photos above)
+  if (place.googleEnriched || place.firebaseEnriched) {
     return place;
   }
 

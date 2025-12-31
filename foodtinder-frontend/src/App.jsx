@@ -324,11 +324,15 @@ function App() {
       
       console.log('Setting places for joined session:', session.places.length);
       
+      // Debug: Check if places have image_url
+      console.log('Sample place from Firebase:', session.places[0]);
+      
       // Enrich places with photos (chain logos are URLs, Google photos need fetching)
       // Import enrichPlacesWithGoogle at the top if needed
       const { enrichPlacesWithGoogle } = await import('./api/googlePlaces');
       const enrichedPlaces = await enrichPlacesWithGoogle(session.places);
       console.log('Enriched places with photos for client');
+      console.log('Sample enriched place:', enrichedPlaces[0]);
       
       // Set places FIRST before clearing other state
       setPlaces(enrichedPlaces);
