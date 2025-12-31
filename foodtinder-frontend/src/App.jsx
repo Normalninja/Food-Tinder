@@ -147,6 +147,9 @@ function App() {
   }, [sessionID, userID, places]); // Remove currentIndex dependency to avoid race conditions
 
   useEffect(() => {
+    // Load recent sessions from localStorage
+    setRecentSessions(getRecentSessions());
+    
     // Get the user's current location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
