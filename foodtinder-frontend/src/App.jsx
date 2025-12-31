@@ -19,6 +19,52 @@ function stripPhotosForFirebase(places) {
   });
 }
 
+// Recent sessions management (max 5 sessions)
+const RECENT_SESSIONS_KEY = 'foodtinder_recent_sessions';
+const MAX_RECENT_SESSIONS = 5;
+
+function getRecentSessions() {
+  try {
+    const stored = localStorage.getItem(RECENT_SESSIONS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.error('Error loading recent sessions:', e);
+    return [];
+  }
+}
+
+function saveRecentSession(sessionID, userID, isCreator, sessionParams = {}) {
+  try {
+    const recent = getRecentSessions();
+    // Remove existing entry for this session (if any)
+    const filtered = recent.filter(s => s.sessionID !== sessionID);
+    // Add new entry at the beginning
+    filtered.unshift({
+      sessionID,
+      userID,
+      isCreator,
+      joinedAt: new Date().toISOString(),
+      params: sessionParams
+    });
+    // Keep only last 5
+    const trimmed = filtered.slice(0, MAX_RECENT_SESSIONS);
+    localStorage.setItem(RECENT_SESSIONS_KEY, JSON.stringify(trimmed));
+    console.log('Saved recent session:', sessionID);
+  } catch (e) {
+    console.error('Error saving recent session:', e);
+  }
+}
+
+function removeRecentSession(sessionID) {
+  try {
+    const recent = getRecentSessions();
+    const filtered = recent.filter(s => s.sessionID !== sessionID);
+    localStorage.setItem(RECENT_SESSIONS_KEY, JSON.stringify(filtered));
+  } catch (e) {
+    console.error('Error removing recent session:', e);
+  }
+}
+
 function App() {
   const [screen, setScreen] = useState('menu'); // menu, parameters, qrcode, swipe, consensus
   const [places, setPlaces] = useState([]);
@@ -56,6 +102,7 @@ function App() {
   const [isSwipeActive, setIsSwipeActive] = useState(false); // Track if user is actively swiping
   const [swipeStartX, setSwipeStartX] = useState(0); // Starting X position of swipe
   const [lastAction, setLastAction] = useState(null); // Store last action for undo: {placeId, liked, previousIndex}
+  const [recentSessions, setRecentSessions] = useState([]); // Recent sessions for quick rejoin
   const ws = useRef(null);
 
   // Update voted count when session or places change
@@ -227,7 +274,7 @@ function App() {
     return 'user-' + Math.random().toString(36).substr(2, 9);
   };
 
-  const handleJoinSession = async (sessionIdParam = null) => {
+  const handleJoinSession = async (sessionIdParam = null, savedUserID = null) => {
     const sessionIdToJoin = sessionIdParam || joinSessionInput.trim();
     
     if (!sessionIdToJoin) {
@@ -235,7 +282,8 @@ function App() {
       return;
     }
     
-    const newUserID = generateUserID();
+    // Use saved userID if rejoining, otherwise generate new one
+    const newUserID = savedUserID || generateUserID();
     setUserID(newUserID);
     setSessionID(sessionIdToJoin);
     setIsSessionCreator(false); // Joining user is not the creator
@@ -305,6 +353,13 @@ function App() {
         setUserIndexes({ user1: 0, user2: 0, user3: 0 });
         setUserVotes({ user1: {}, user2: {}, user3: {} });
       }
+      
+      // Save to recent sessions
+      saveRecentSession(sessionIdToJoin, newUserID, false, {
+        distance: session.distance,
+        distanceUnit: session.distanceUnit
+      });
+      setRecentSessions(getRecentSessions());
       
       // Use setTimeout to ensure places state is updated before changing screen
       setTimeout(() => {
@@ -570,6 +625,15 @@ function App() {
         setCurrentIndex(0);
       }
       // If isUpdate but no filteredVotes/Dislikes, keep currentIndex as is
+      
+      // Save to recent sessions
+      saveRecentSession(newSessionID, newUserID, true, {
+        distance,
+        distanceUnit,
+        latitude,
+        longitude
+      });
+      setRecentSessions(getRecentSessions());
       
       // Only show QR code for first-time creation, not when updating parameters
       if (isUpdate) {
@@ -1156,6 +1220,82 @@ function App() {
               Join Session
             </button>
           </div>
+          
+          {/* Recent Sessions */}
+          {recentSessions.length > 0 && (
+            <div style={{ marginTop: 40, maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }}>
+              <h3 style={{ marginBottom: 20, color: '#666' }}>Recent Sessions</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {recentSessions.map((session, idx) => (
+                  <div
+                    key={session.sessionID}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '15px 20px',
+                      background: '#f8f9fa',
+                      borderRadius: 8,
+                      border: '1px solid #dee2e6'
+                    }}
+                  >
+                    <div style={{ textAlign: 'left', flex: 1 }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: 5 }}>
+                        {session.isCreator ? '👑 ' : '👤 '}
+                        {session.sessionID}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#666' }}>
+                        {session.isCreator ? 'Creator' : 'Participant'} •{' '}
+                        {new Date(session.joinedAt).toLocaleDateString()}{' '}
+                        {new Date(session.joinedAt).toLocaleTimeString()}
+                        {session.params?.distance && (
+                          <> • {session.params.distance} {session.params.distanceUnit}</>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button
+                        onClick={async () => {
+                          // Rejoin with saved userID
+                          await handleJoinSession(session.sessionID, session.userID);
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: 14,
+                          background: '#50C878',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 6,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Rejoin
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('Remove this session from recent list?')) {
+                            removeRecentSession(session.sessionID);
+                            setRecentSessions(getRecentSessions());
+                          }
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: 14,
+                          background: '#dc3545',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 6,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
